@@ -1,0 +1,17 @@
+.next
+node_modules
+dist
+out
+.vercel
+coverage
+*.log
+next-env.d.ts
+.env
+.env.local
+.env.production
+.env.development
+connection.env.local
+.prod.stdout.log
+.prod.stderr.log
+.drizzle
+tsconfig.tsbuildinfo

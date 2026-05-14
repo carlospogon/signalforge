@@ -1,0 +1,19 @@
+import { config as loadEnv } from "dotenv";
+
+loadEnv({ path: ".env.local" });
+loadEnv();
+
+function requireEnv(name: string, fallback?: string) {
+  const value = process.env[name] ?? fallback;
+
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+
+  return value;
+}
+
+export const env = {
+  DATABASE_URL: requireEnv("DATABASE_URL"),
+  DIRECT_DATABASE_URL: requireEnv("DIRECT_DATABASE_URL", process.env.DATABASE_URL)
+};
