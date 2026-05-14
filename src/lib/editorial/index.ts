@@ -26,11 +26,9 @@ export async function getAnalysisDrafts(limit = 3) {
 }
 
 export async function getDraftQueue() {
-  await ingestSignals();
   return listDraftArticles();
 }
 
 export async function getEditorialSummary() {
-  await ingestSignals();
   return getEditorialSummaryFromDb();
 }

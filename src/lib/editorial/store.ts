@@ -1,6 +1,4 @@
-import "server-only";
-
-import { count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/db";
 import { draftArticles, importedSignals, sources } from "@/db/schema";
 import { editorialSources } from "@/data/editorial-sources";
@@ -45,12 +43,17 @@ function serializeSource(source: EditorialSource) {
 }
 
 function buildImportedSignal(entry: SourceSignal, source: EditorialSource): ImportedSignal {
-  const hashUnico = createStableHash(`${normalizeText(entry.tituloOriginal)}::${entry.urlOriginal}`);
+  const publicationDay = entry.fechaPublicacion.slice(0, 10);
+  const dedupeSeed =
+    entry.guidOriginal ||
+    `${normalizeText(entry.tituloOriginal)}::${normalizeText(entry.resumenOriginal).slice(0, 120)}::${publicationDay}`;
+  const hashUnico = createStableHash(dedupeSeed);
   const fechaIngesta = new Date().toISOString();
   const signalBase = {
     id: entry.id,
     tituloOriginal: entry.tituloOriginal,
     urlOriginal: entry.urlOriginal,
+    guidOriginal: entry.guidOriginal,
     fuente: source,
     fechaPublicacion: entry.fechaPublicacion,
     resumenOriginal: entry.resumenOriginal,
@@ -86,6 +89,7 @@ function mapSignalRow(row: typeof importedSignals.$inferSelect, source: Editoria
     id: row.id,
     tituloOriginal: row.tituloOriginal,
     urlOriginal: row.urlOriginal,
+    guidOriginal: row.guidOriginal ?? undefined,
     fuente: source,
     fechaPublicacion: row.fechaPublicacion.toISOString(),
     resumenOriginal: row.resumenOriginal,
@@ -129,15 +133,26 @@ function mapDraftRow(row: typeof draftArticles.$inferSelect): DraftArticle {
   };
 }
 
+const activeSourceUrls = new Set(editorialSources.map((source) => source.url));
+
+async function getActiveSourceRows() {
+  const rows = await db.select().from(sources).orderBy(sources.nombre);
+  return rows.filter((row) => activeSourceUrls.has(row.url));
+}
+
 export async function syncEditorialSources() {
   for (const source of editorialSources) {
-    await db
-      .insert(sources)
-      .values(serializeSource(source))
-      .onConflictDoUpdate({
-        target: sources.url,
-        set: {
+    const [existingById] = await db.select().from(sources).where(eq(sources.id, source.id)).limit(1);
+    const [existingByUrl] = existingById
+      ? [existingById]
+      : await db.select().from(sources).where(eq(sources.url, source.url)).limit(1);
+
+    if (existingByUrl) {
+      await db
+        .update(sources)
+        .set({
           nombre: source.nombre,
+          url: source.url,
           tipo: source.tipo,
           categoriaPrincipal: source.categoriaPrincipal,
           idioma: source.idioma,
@@ -146,53 +161,61 @@ export async function syncEditorialSources() {
           permiteAutopublicacion: source.permiteAutopublicacion,
           requiereRevision: source.requiereRevision,
           updatedAt: new Date()
-        }
-      });
+        })
+        .where(eq(sources.id, existingByUrl.id));
+      continue;
+    }
+
+    await db.insert(sources).values(serializeSource(source));
   }
 
-  const rows = await db.select().from(sources).orderBy(sources.nombre);
+  const rows = await getActiveSourceRows();
   return rows.map(mapSourceRow);
 }
 
 async function upsertImportedSignal(signal: ImportedSignal) {
-  await db
-    .insert(importedSignals)
-    .values({
-      id: signal.id,
-      sourceId: signal.fuente.id,
-      tituloOriginal: signal.tituloOriginal,
-      urlOriginal: signal.urlOriginal,
-      guidOriginal: signal.urlOriginal,
-      fechaPublicacion: new Date(signal.fechaPublicacion),
-      resumenOriginal: signal.resumenOriginal,
-      palabrasClave: [],
-      categoriaSugerida: signal.categoriaSugerida,
-      relevancia: signal.clasificacion.relevancia,
-      riesgoEditorial: signal.clasificacion.riesgoEditorial,
-      prioridadPublicacion: signal.clasificacion.prioridadPublicacion,
-      accionSugerida: signal.clasificacion.accionSugerida,
-      formatoSugerido: signal.clasificacion.formatoSugerido,
-      fechaIngesta: new Date(signal.fechaIngesta),
-      hashUnico: signal.hashUnico
-    })
-    .onConflictDoUpdate({
-      target: importedSignals.id,
-      set: {
-        tituloOriginal: signal.tituloOriginal,
-        urlOriginal: signal.urlOriginal,
-        guidOriginal: signal.urlOriginal,
-        fechaPublicacion: new Date(signal.fechaPublicacion),
-        resumenOriginal: signal.resumenOriginal,
-        categoriaSugerida: signal.categoriaSugerida,
-        relevancia: signal.clasificacion.relevancia,
-        riesgoEditorial: signal.clasificacion.riesgoEditorial,
-        prioridadPublicacion: signal.clasificacion.prioridadPublicacion,
-        accionSugerida: signal.clasificacion.accionSugerida,
-        formatoSugerido: signal.clasificacion.formatoSugerido,
-        fechaIngesta: new Date(signal.fechaIngesta),
-        hashUnico: signal.hashUnico
-      }
-    });
+  const guidOriginal = signal.guidOriginal ?? signal.urlOriginal;
+  const [existing] = await db
+    .select({ id: importedSignals.id })
+    .from(importedSignals)
+    .where(
+      or(
+        eq(importedSignals.id, signal.id),
+        eq(importedSignals.urlOriginal, signal.urlOriginal),
+        eq(importedSignals.hashUnico, signal.hashUnico),
+        eq(importedSignals.guidOriginal, guidOriginal)
+      )
+    )
+    .limit(1);
+
+  const payload = {
+    sourceId: signal.fuente.id,
+    tituloOriginal: signal.tituloOriginal,
+    urlOriginal: signal.urlOriginal,
+    guidOriginal,
+    fechaPublicacion: new Date(signal.fechaPublicacion),
+    resumenOriginal: signal.resumenOriginal,
+    palabrasClave: [],
+    categoriaSugerida: signal.categoriaSugerida,
+    relevancia: signal.clasificacion.relevancia,
+    riesgoEditorial: signal.clasificacion.riesgoEditorial,
+    prioridadPublicacion: signal.clasificacion.prioridadPublicacion,
+    accionSugerida: signal.clasificacion.accionSugerida,
+    formatoSugerido: signal.clasificacion.formatoSugerido,
+    fechaIngesta: new Date(signal.fechaIngesta),
+    hashUnico: signal.hashUnico
+  };
+
+  if (existing) {
+    await db.update(importedSignals).set(payload).where(eq(importedSignals.id, existing.id));
+    return existing.id;
+  }
+
+  await db.insert(importedSignals).values({
+    id: signal.id,
+    ...payload
+  });
+  return signal.id;
 }
 
 async function upsertDraft(draft: DraftArticle) {
@@ -253,37 +276,51 @@ async function upsertDraft(draft: DraftArticle) {
 export async function refreshEditorialData() {
   const persistedSources = await syncEditorialSources();
 
-  await Promise.allSettled(
-    persistedSources.map(async (source) => {
+  for (const source of persistedSources) {
+    try {
       const rawSignals = await fetchSourceSignals(source);
 
       for (const rawSignal of rawSignals) {
         const imported = buildImportedSignal(rawSignal, source);
-        await upsertImportedSignal(imported);
+        const signalId = await upsertImportedSignal(imported);
 
         if (imported.categoriaSugerida === "opinion") {
           continue;
         }
 
         try {
-          await upsertDraft(generateDraftArticle(imported));
+          await upsertDraft({
+            ...generateDraftArticle(imported),
+            id: `draft-${signalId}`,
+            originalSignalId: signalId
+          });
         } catch {
           // Invalid or manual-only drafts stay outside the automatic queue.
         }
       }
-    })
-  );
+    } catch (error) {
+      console.error(`Editorial ingestion failed for source ${source.id}`, error);
+    }
+  }
 }
 
 export async function listEditorialSources() {
-  const rows = await db.select().from(sources).orderBy(sources.nombre);
+  const rows = await getActiveSourceRows();
   return rows.map(mapSourceRow);
 }
 
 export async function listImportedSignals(limit = 50) {
+  const activeRows = await getActiveSourceRows();
+  const activeIds = activeRows.map((row) => row.id);
+
+  if (activeIds.length === 0) {
+    return [];
+  }
+
   const signalRows = await db
     .select()
     .from(importedSignals)
+    .where(inArray(importedSignals.sourceId, activeIds))
     .orderBy(desc(importedSignals.fechaPublicacion), desc(importedSignals.createdAt))
     .limit(limit);
 
@@ -291,12 +328,7 @@ export async function listImportedSignals(limit = 50) {
     return [];
   }
 
-  const sourceRows = await db
-    .select()
-    .from(sources)
-    .where(inArray(sources.id, [...new Set(signalRows.map((signal) => signal.sourceId))]));
-
-  const sourceMap = new Map(sourceRows.map((row) => [row.id, mapSourceRow(row)]));
+  const sourceMap = new Map(activeRows.map((row) => [row.id, mapSourceRow(row)]));
 
   return signalRows
     .map((row) => {
@@ -307,9 +339,17 @@ export async function listImportedSignals(limit = 50) {
 }
 
 export async function listDraftArticles(limit = 50) {
+  const activeRows = await getActiveSourceRows();
+  const activeIds = activeRows.map((row) => row.id);
+
+  if (activeIds.length === 0) {
+    return [];
+  }
+
   const rows = await db
     .select()
     .from(draftArticles)
+    .where(inArray(draftArticles.sourceId, activeIds))
     .orderBy(desc(draftArticles.fechaCreacion), desc(draftArticles.createdAt))
     .limit(limit);
 
@@ -317,19 +357,35 @@ export async function listDraftArticles(limit = 50) {
 }
 
 export async function getEditorialSummaryFromDb() {
-  const [sourceCountRow] = await db.select({ value: count() }).from(sources);
-  const [signalCountRow] = await db.select({ value: count() }).from(importedSignals);
+  const activeRows = await getActiveSourceRows();
+  const activeIds = activeRows.map((row) => row.id);
+
+  if (activeIds.length === 0) {
+    return {
+      sourceCount: 0,
+      signalCount: 0,
+      reviewCount: 0,
+      autopublishReadyCount: 0
+    };
+  }
+
+  const [signalCountRow] = await db
+    .select({ value: count() })
+    .from(importedSignals)
+    .where(inArray(importedSignals.sourceId, activeIds));
   const [reviewCountRow] = await db
     .select({ value: count() })
     .from(draftArticles)
-    .where(eq(draftArticles.estado, "needs_review"));
+    .where(and(inArray(draftArticles.sourceId, activeIds), eq(draftArticles.estado, "needs_review")));
   const [autopublishCountRow] = await db
     .select({ value: count() })
     .from(draftArticles)
-    .where(eq(draftArticles.accionSugerida, "autopublish_candidate"));
+    .where(
+      and(inArray(draftArticles.sourceId, activeIds), eq(draftArticles.accionSugerida, "autopublish_candidate"))
+    );
 
   return {
-    sourceCount: sourceCountRow?.value ?? 0,
+    sourceCount: activeIds.length,
     signalCount: signalCountRow?.value ?? 0,
     reviewCount: reviewCountRow?.value ?? 0,
     autopublishReadyCount: autopublishCountRow?.value ?? 0

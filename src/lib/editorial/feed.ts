@@ -3,16 +3,16 @@ import { decode } from "he";
 import { EditorialSource, SourceSignal } from "@/types/editorial";
 
 type FeedEntry = {
-  title?: string;
+  title?: string | { "#text"?: string; "__cdata"?: string };
   link?: string | { href?: string } | Array<{ href?: string }>;
   guid?: string | { "#text"?: string };
   pubDate?: string;
   isoDate?: string;
   published?: string;
   updated?: string;
-  summary?: string;
-  content?: string;
-  description?: string;
+  summary?: unknown;
+  content?: unknown;
+  description?: unknown;
   category?: string | string[] | Array<string | { "#text"?: string }>;
 };
 
@@ -31,8 +31,25 @@ function toArray<T>(value: T | T[] | undefined) {
   return Array.isArray(value) ? value : [value];
 }
 
-function stripHtml(value: string) {
-  return decode(value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+function toText(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => toText(item)).join(" ");
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return toText(record["#text"] ?? record.__cdata ?? record.href ?? "");
+  }
+
+  return "";
+}
+
+function stripHtml(value: unknown) {
+  return decode(toText(value).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
 }
 
 function normalizeText(value: string) {
@@ -114,6 +131,7 @@ function normalizeEntry(source: EditorialSource, entry: FeedEntry, index: number
     sourceId: source.id,
     tituloOriginal,
     urlOriginal,
+    guidOriginal: guid || undefined,
     fechaPublicacion: new Date(pickPublishedAt(entry)).toISOString(),
     resumenOriginal: pickSummary(entry),
     palabrasClave: pickKeywords(entry)
@@ -135,7 +153,8 @@ export async function fetchSourceSignals(source: EditorialSource, limit = 12) {
   try {
     const response = await fetch(source.url, {
       headers: {
-        Accept: "application/rss+xml, application/xml, text/xml;q=0.9"
+        Accept: "application/rss+xml, application/xml, text/xml;q=0.9",
+        "User-Agent": "SynaptikBot/1.0 (+https://signalforge-sand.vercel.app)"
       },
       next: { revalidate: 1800 },
       signal: controller.signal

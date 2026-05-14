@@ -42,6 +42,7 @@ export type SourceSignal = {
   sourceId: string;
   tituloOriginal: string;
   urlOriginal: string;
+  guidOriginal?: string;
   fechaPublicacion: string;
   resumenOriginal: string;
   palabrasClave: string[];
@@ -60,6 +61,7 @@ export type ImportedSignal = {
   id: string;
   tituloOriginal: string;
   urlOriginal: string;
+  guidOriginal?: string;
   fuente: EditorialSource;
   fechaPublicacion: string;
   resumenOriginal: string;

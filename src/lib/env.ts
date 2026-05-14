@@ -15,5 +15,6 @@ function requireEnv(name: string, fallback?: string) {
 
 export const env = {
   DATABASE_URL: requireEnv("DATABASE_URL"),
-  DIRECT_DATABASE_URL: requireEnv("DIRECT_DATABASE_URL", process.env.DATABASE_URL)
+  DIRECT_DATABASE_URL: requireEnv("DIRECT_DATABASE_URL", process.env.DATABASE_URL),
+  CRON_SECRET: process.env.CRON_SECRET ?? ""
 };
