@@ -4,8 +4,9 @@ import { SignalList } from "@/components/editorial/signal-list";
 import { MarketStrip } from "@/components/home/market-strip";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { getArticleById } from "@/lib/content";
+import { getAllArticles } from "@/lib/content";
 import { getEditorialSummary, getRadarSignals } from "@/lib/editorial";
+import { Article } from "@/types/article";
 
 const topLinks = [
   { label: "Newsletter", href: "/newsletter" },
@@ -39,23 +40,25 @@ const metrics = [
 const bottomCards = ["la-fatiga-de-las-demos", "benchmark-agentes-redaccion", "mini-reactores-datos", "seguridad-modelos"];
 
 export default async function Home() {
-  const hero = getArticleById("infraestructura-europea-ia");
-  const nowStory = getArticleById("chip-fotonico-revoluciona-ia");
+  const allArticles = await getAllArticles();
+  const articleMap = new Map<string, Article>(allArticles.map((article) => [article.id, article]));
+  const hero = articleMap.get("infraestructura-europea-ia");
+  const nowStory = articleMap.get("chip-fotonico-revoluciona-ia");
   const sideArticles = sideStories
     .map((story) => {
-      const article = getArticleById(story.id);
+      const article = articleMap.get(story.id);
       return article ? { ...story, article } : null;
     })
     .filter((story): story is NonNullable<typeof story> => story !== null);
   const mostReadArticles = mostRead
     .map((item) => {
-      const article = getArticleById(item.id);
+      const article = articleMap.get(item.id);
       return article ? { ...item, article } : null;
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
   const analysisCards = bottomCards
     .map((item) => {
-      const article = getArticleById(item);
+      const article = articleMap.get(item);
       return article ? { id: item, article } : null;
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);

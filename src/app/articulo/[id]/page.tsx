@@ -5,19 +5,19 @@ import { ArticleList } from "@/components/articles/article-list";
 import { ArticleVisual } from "@/components/articles/article-visual";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { getAllArticles, getArticleById, getCategoryBySlug, getRelatedArticles } from "@/lib/content";
+import { getArticleById, getCategoryBySlug, getRelatedArticles } from "@/lib/content";
 
 type ArticlePageProps = {
   params: Promise<{ id: string }>;
 };
 
 export function generateStaticParams() {
-  return getAllArticles().map((article) => ({ id: article.id }));
+  return [];
 }
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { id } = await params;
-  const article = getArticleById(id);
+  const article = await getArticleById(id);
 
   if (!article) {
     return {};
@@ -31,14 +31,14 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { id } = await params;
-  const article = getArticleById(id);
+  const article = await getArticleById(id);
 
   if (!article) {
     notFound();
   }
 
   const category = getCategoryBySlug(article.category);
-  const relatedArticles = getRelatedArticles(article.id, article.category, 3);
+  const relatedArticles = await getRelatedArticles(article.id, article.category, 3);
 
   return (
     <div className="min-h-screen bg-[#05090f] text-white">

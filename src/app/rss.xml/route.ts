@@ -16,7 +16,7 @@ function escapeXml(value: string) {
 }
 
 export async function GET() {
-  const articles = getAllArticles().slice(0, 12).map((article, index) => ({
+  const articles = (await getAllArticles()).slice(0, 12).map((article, index) => ({
     title: article.title,
     url: `${siteConfig.url}/articulo/${article.id}`,
     description: article.excerpt,

@@ -1,11 +1,18 @@
 import { and, count, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/db";
-import { draftArticles, importedSignals, sources } from "@/db/schema";
+import {
+  draftArticles,
+  importedSignals,
+  publicationReviews,
+  publishedArticles,
+  sources
+} from "@/db/schema";
 import { editorialSources } from "@/data/editorial-sources";
 import { generateDraftArticle } from "@/lib/editorial/drafts";
 import { fetchSourceSignals } from "@/lib/editorial/feed";
 import { classifySignal } from "@/lib/editorial/classify";
 import { DraftArticle, EditorialSource, ImportedSignal, SourceSignal } from "@/types/editorial";
+import { Article } from "@/types/article";
 
 function normalizeText(value: string) {
   return value
@@ -25,6 +32,50 @@ function createStableHash(input: string) {
   }
 
   return `sig-${Math.abs(hash).toString(16)}`;
+}
+
+const categoryAccents: Record<DraftArticle["categoria"], string> = {
+  ia: "from-[#0b2f35] via-[#0f5e63] to-[#9be3ef]",
+  ciencia: "from-[#1a224d] via-[#3148b7] to-[#8cc0ff]",
+  tecnologia: "from-[#10211b] via-[#236b4c] to-[#89f0ad]",
+  espacio: "from-[#120d27] via-[#342a79] to-[#9bb8ff]",
+  salud: "from-[#29151a] via-[#7e3245] to-[#ffb4c0]",
+  biotech: "from-[#182328] via-[#2d6c78] to-[#98ecea]",
+  ciberseguridad: "from-[#1f1510] via-[#7a4b1f] to-[#ffb77a]",
+  laboratorio: "from-[#111f29] via-[#2a6b7d] to-[#90e8ff]",
+  opinion: "from-[#1f1a0c] via-[#6f5b19] to-[#ffe17a]"
+};
+
+const categoryTags: Record<DraftArticle["categoria"], string> = {
+  ia: "IA",
+  ciencia: "Ciencia",
+  tecnologia: "Tecnologia",
+  espacio: "Espacio",
+  salud: "Salud",
+  biotech: "Biotech",
+  ciberseguridad: "Ciberseguridad",
+  laboratorio: "Laboratorio",
+  opinion: "Opinion"
+};
+
+function formatPublishedLabel(value: Date) {
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  }).format(value);
+}
+
+function mapDraftToTag(draft: DraftArticle) {
+  if (draft.tipo === "radar") {
+    return "Radar";
+  }
+
+  if (draft.tipo === "analysis") {
+    return "Analisis";
+  }
+
+  return categoryTags[draft.categoria];
 }
 
 function serializeSource(source: EditorialSource) {
@@ -130,6 +181,40 @@ function mapDraftRow(row: typeof draftArticles.$inferSelect): DraftArticle {
     prioridadPublicacion: row.prioridadPublicacion,
     accionSugerida: row.accionSugerida,
     originalSignalId: row.signalId
+  };
+}
+
+function mapPublishedArticleRow(row: typeof publishedArticles.$inferSelect): Article {
+  return {
+    id: row.slug,
+    title: row.titulo,
+    excerpt: row.excerpt,
+    category: row.categoria,
+    author: row.autor,
+    readingTime: row.tiempoLectura,
+    publishedAt: formatPublishedLabel(row.publishedAt),
+    accent: row.accent,
+    tag: row.tag,
+    deck: row.deck ?? undefined,
+    body: row.cuerpo
+  };
+}
+
+function buildPublishedArticlePayload(draft: DraftArticle, publishedAt: Date) {
+  return {
+    draftId: draft.id,
+    slug: draft.slug,
+    titulo: draft.titulo,
+    excerpt: draft.entradilla,
+    deck: draft.entradilla,
+    cuerpo: draft.cuerpo,
+    categoria: draft.categoria,
+    autor: draft.autor,
+    tiempoLectura: draft.tiempoLectura,
+    accent: categoryAccents[draft.categoria],
+    tag: mapDraftToTag(draft),
+    publishedAt,
+    updatedAt: new Date()
   };
 }
 
@@ -354,6 +439,94 @@ export async function listDraftArticles(limit = 50) {
     .limit(limit);
 
   return rows.map(mapDraftRow);
+}
+
+export async function listPublishedArticles() {
+  const rows = await db.select().from(publishedArticles).orderBy(desc(publishedArticles.publishedAt));
+  return rows.map(mapPublishedArticleRow);
+}
+
+export async function getPublishedArticleBySlug(slug: string) {
+  const [row] = await db.select().from(publishedArticles).where(eq(publishedArticles.slug, slug)).limit(1);
+  return row ? mapPublishedArticleRow(row) : null;
+}
+
+async function recordPublicationReview(
+  draftId: string,
+  reviewerName: string,
+  decision: DraftArticle["estado"],
+  notes?: string
+) {
+  await db.insert(publicationReviews).values({
+    id: `review-${draftId}-${Date.now()}`,
+    draftId,
+    reviewerName,
+    decision,
+    notes
+  });
+}
+
+export async function updateDraftState(draftId: string, estado: DraftArticle["estado"], reviewerName: string) {
+  const [draft] = await db.select().from(draftArticles).where(eq(draftArticles.id, draftId)).limit(1);
+
+  if (!draft) {
+    throw new Error("Draft not found.");
+  }
+
+  await db
+    .update(draftArticles)
+    .set({
+      estado,
+      updatedAt: new Date()
+    })
+    .where(eq(draftArticles.id, draftId));
+
+  await recordPublicationReview(draftId, reviewerName, estado);
+
+  return {
+    categoria: draft.categoria,
+    slug: draft.slug
+  };
+}
+
+export async function publishDraftArticle(draftId: string, reviewerName: string) {
+  const [draftRow] = await db.select().from(draftArticles).where(eq(draftArticles.id, draftId)).limit(1);
+
+  if (!draftRow) {
+    throw new Error("Draft not found.");
+  }
+
+  const draft = mapDraftRow(draftRow);
+  const publishedAt = new Date();
+  const articleId = draftRow.publishedArticleId ?? `pub-${draft.id}`;
+
+  await db
+    .insert(publishedArticles)
+    .values({
+      id: articleId,
+      ...buildPublishedArticlePayload(draft, publishedAt)
+    })
+    .onConflictDoUpdate({
+      target: publishedArticles.id,
+      set: buildPublishedArticlePayload(draft, publishedAt)
+    });
+
+  await db
+    .update(draftArticles)
+    .set({
+      estado: "published",
+      publishedArticleId: articleId,
+      updatedAt: new Date()
+    })
+    .where(eq(draftArticles.id, draftId));
+
+  await recordPublicationReview(draftId, reviewerName, "published");
+
+  return {
+    articleId,
+    slug: draft.slug,
+    categoria: draft.categoria
+  };
 }
 
 export async function getEditorialSummaryFromDb() {

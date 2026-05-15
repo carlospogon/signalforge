@@ -4,9 +4,9 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getAllArticles, getCategories } from "@/lib/content";
 
-export default function ArchivePage() {
+export default async function ArchivePage() {
   const categories = getCategories();
-  const articles = getAllArticles();
+  const articles = await getAllArticles();
 
   return (
     <div className="min-h-screen bg-[#05090f] text-white">

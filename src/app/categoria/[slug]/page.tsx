@@ -37,7 +37,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
-  const articles = getArticlesByCategory(slug);
+  const articles = await getArticlesByCategory(slug);
 
   return (
     <div className="min-h-screen bg-[#05090f] text-white">

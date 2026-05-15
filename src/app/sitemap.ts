@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { getAllArticles, getCategories } from "@/lib/content";
 import { siteConfig } from "@/lib/site";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseEntries: MetadataRoute.Sitemap = [
     "",
     "/archivo",
@@ -21,7 +21,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date()
   }));
 
-  const articleEntries: MetadataRoute.Sitemap = getAllArticles().map((article) => ({
+  const articleEntries: MetadataRoute.Sitemap = (await getAllArticles()).map((article) => ({
     url: `${siteConfig.url}/articulo/${article.id}`,
     lastModified: new Date()
   }));

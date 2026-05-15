@@ -151,3 +151,31 @@ export const publicationReviews = pgTable(
     draftIdx: index("publication_reviews_draft_idx").on(table.draftId, table.createdAt)
   })
 );
+
+export const publishedArticles = pgTable(
+  "published_articles",
+  {
+    id: varchar("id", { length: 128 }).primaryKey(),
+    draftId: varchar("draft_id", { length: 128 })
+      .notNull()
+      .references(() => draftArticles.id, { onDelete: "restrict" }),
+    slug: varchar("slug", { length: 255 }).notNull(),
+    titulo: text("titulo").notNull(),
+    excerpt: text("excerpt").notNull(),
+    deck: text("deck"),
+    cuerpo: text("cuerpo").array().notNull(),
+    categoria: categoryEnum("categoria").notNull(),
+    autor: varchar("autor", { length: 255 }).notNull(),
+    tiempoLectura: varchar("tiempo_lectura", { length: 32 }).notNull(),
+    accent: varchar("accent", { length: 255 }).notNull(),
+    tag: varchar("tag", { length: 64 }).notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => ({
+    slugUniqueIdx: uniqueIndex("published_articles_slug_unique_idx").on(table.slug),
+    draftUniqueIdx: uniqueIndex("published_articles_draft_unique_idx").on(table.draftId),
+    categoryDateIdx: index("published_articles_category_date_idx").on(table.categoria, table.publishedAt)
+  })
+);
