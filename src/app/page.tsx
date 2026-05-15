@@ -4,7 +4,7 @@ import { SignalList } from "@/components/editorial/signal-list";
 import { MarketStrip } from "@/components/home/market-strip";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { getAllArticles } from "@/lib/content";
+import { getAllArticles, getCategories } from "@/lib/content";
 import { getEditorialSummary, getRadarSignals } from "@/lib/editorial";
 import { Article } from "@/types/article";
 
@@ -12,21 +12,6 @@ const topLinks = [
   { label: "Newsletter", href: "/newsletter" },
   { label: "Quienes somos", href: "/quienes-somos" },
   { label: "Contacto", href: "/contacto" }
-];
-
-const sideStories = [
-  { id: "agua-exoplaneta-habitable", category: "Espacio" },
-  { id: "chip-fotonico-revoluciona-ia", category: "Tecnologia" },
-  { id: "fusion-nuclear-22-minutos", category: "Ciencia" },
-  { id: "terapia-genica-sin-cirugia", category: "Salud" }
-];
-
-const mostRead = [
-  { id: "infraestructura-europea-ia" },
-  { id: "chip-fotonico-revoluciona-ia" },
-  { id: "fusion-nuclear-22-minutos" },
-  { id: "rover-buscara-vida-marte-2026" },
-  { id: "pacientes-crispr-exito" }
 ];
 
 const metrics = [
@@ -37,31 +22,99 @@ const metrics = [
   { value: "Premios", detail: "Reconocidos por nuestra calidad editorial", href: "/quienes-somos" }
 ];
 
-const bottomCards = ["la-fatiga-de-las-demos", "benchmark-agentes-redaccion", "mini-reactores-datos", "seguridad-modelos"];
+function pickUniqueArticles(articles: Article[], limit: number, excludedIds: string[] = []) {
+  const excluded = new Set(excludedIds);
+  const picked: Article[] = [];
+
+  for (const article of articles) {
+    if (excluded.has(article.id)) {
+      continue;
+    }
+
+    picked.push(article);
+    excluded.add(article.id);
+
+    if (picked.length === limit) {
+      break;
+    }
+  }
+
+  return picked;
+}
+
+function pickFreshSideArticles(articles: Article[], limit: number, excludedIds: string[] = []) {
+  const excluded = new Set(excludedIds);
+  const usedCategories = new Set<string>();
+  const picked: Article[] = [];
+
+  for (const article of articles) {
+    if (excluded.has(article.id) || usedCategories.has(article.category)) {
+      continue;
+    }
+
+    picked.push(article);
+    excluded.add(article.id);
+    usedCategories.add(article.category);
+
+    if (picked.length === limit) {
+      break;
+    }
+  }
+
+  if (picked.length < limit) {
+    for (const article of articles) {
+      if (excluded.has(article.id)) {
+        continue;
+      }
+
+      picked.push(article);
+      excluded.add(article.id);
+
+      if (picked.length === limit) {
+        break;
+      }
+    }
+  }
+
+  return picked;
+}
+
+function pickAnalysisCards(articles: Article[], limit: number, excludedIds: string[] = []) {
+  const preferred = articles.filter(
+    (article) =>
+      article.category === "opinion" ||
+      article.tag.toLowerCase().includes("anal") ||
+      article.tag.toLowerCase().includes("opinion") ||
+      article.tag.toLowerCase().includes("contexto")
+  );
+
+  const picked = pickUniqueArticles(preferred, limit, excludedIds);
+
+  if (picked.length === limit) {
+    return picked;
+  }
+
+  return [...picked, ...pickUniqueArticles(articles, limit - picked.length, [...excludedIds, ...picked.map((article) => article.id)])];
+}
 
 export default async function Home() {
   const allArticles = await getAllArticles();
-  const articleMap = new Map<string, Article>(allArticles.map((article) => [article.id, article]));
-  const hero = articleMap.get("infraestructura-europea-ia");
-  const nowStory = articleMap.get("chip-fotonico-revoluciona-ia");
-  const sideArticles = sideStories
-    .map((story) => {
-      const article = articleMap.get(story.id);
-      return article ? { ...story, article } : null;
-    })
-    .filter((story): story is NonNullable<typeof story> => story !== null);
-  const mostReadArticles = mostRead
-    .map((item) => {
-      const article = articleMap.get(item.id);
-      return article ? { ...item, article } : null;
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
-  const analysisCards = bottomCards
-    .map((item) => {
-      const article = articleMap.get(item);
-      return article ? { id: item, article } : null;
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
+  const categoryLabelMap = new Map(getCategories().map((category) => [category.slug, category.label]));
+  const hero = allArticles[0];
+  const nowStory = allArticles[1] ?? allArticles[0];
+  const sideArticles = pickFreshSideArticles(allArticles, 4, [hero?.id, nowStory?.id].filter(Boolean) as string[]);
+  const recentArticles = pickUniqueArticles(
+    allArticles,
+    5,
+    [hero?.id, nowStory?.id, ...sideArticles.map((article) => article.id)].filter(Boolean) as string[]
+  );
+  const analysisCards = pickAnalysisCards(
+    allArticles,
+    4,
+    [hero?.id, nowStory?.id, ...sideArticles.map((article) => article.id), ...recentArticles.map((article) => article.id)].filter(
+      Boolean
+    ) as string[]
+  );
   const [radarSignals, editorialSummary] = await Promise.all([getRadarSignals(3), getEditorialSummary()]);
 
   if (!hero || !nowStory) {
@@ -103,7 +156,7 @@ export default async function Home() {
               >
                 <div className="space-y-5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b5ff2a]">
-                    Inteligencia Artificial
+                    {categoryLabelMap.get(hero.category) ?? hero.category}
                   </p>
                   <h2 className="font-display max-w-[360px] text-[20px] font-semibold leading-[1.26] tracking-[-0.01em] text-[#f6f8fa] sm:text-[24px]">
                     {hero.title}
@@ -142,21 +195,23 @@ export default async function Home() {
             </article>
 
             <div className="space-y-3">
-              {sideArticles.map((story) => (
+              {sideArticles.map((article) => (
                 <Link
-                  key={story.id}
-                  href={`/articulo/${story.id}`}
+                  key={article.id}
+                  href={`/articulo/${article.id}`}
                   className="flex gap-3 border-b border-[#1b242d] pb-3 transition hover:bg-white/[0.02] last:border-b-0"
                 >
                   <ArticleVisual
-                    article={story.article}
+                    article={article}
                     className="aspect-[6/5] w-[92px] shrink-0"
                     sizes="92px"
                   />
                   <div className="space-y-1.5">
-                    <p className="text-[9px] uppercase tracking-[0.1em] text-[#b5ff2a]">{story.category}</p>
-                    <h3 className="text-[13px] leading-5 text-[#f0f4f7]">{story.article.title}</h3>
-                    <p className="text-[10px] text-[#778491]">{story.article.publishedAt}</p>
+                    <p className="text-[9px] uppercase tracking-[0.1em] text-[#b5ff2a]">
+                      {categoryLabelMap.get(article.category) ?? article.category}
+                    </p>
+                    <h3 className="text-[13px] leading-5 text-[#f0f4f7]">{article.title}</h3>
+                    <p className="text-[10px] text-[#778491]">{article.publishedAt}</p>
                   </div>
                 </Link>
               ))}
@@ -165,7 +220,7 @@ export default async function Home() {
             <aside className="bg-[#0b131c] px-5 py-6 sm:px-7">
               <div className="flex items-center justify-between">
                 <h3 className="text-[20px] font-semibold uppercase tracking-[0.04em] text-[#eef3f7] sm:text-[24px]">
-                  Lo mas leido
+                  Ultimas publicadas
                 </h3>
                 <Link href="/archivo" className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">
                   Ver mas
@@ -173,19 +228,19 @@ export default async function Home() {
               </div>
               <div className="mt-4 h-px w-8 bg-[#b5ff2a]" />
               <ol className="mt-6 space-y-5">
-                {mostReadArticles.map((item, index) => (
-                  <li key={item.id} className="grid grid-cols-[18px_1fr] gap-4">
+                {recentArticles.map((article, index) => (
+                  <li key={article.id} className="grid grid-cols-[18px_1fr] gap-4">
                     <span className="text-[28px] leading-none text-[#b5ff2a]">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <div className="space-y-2">
                       <Link
-                        href={`/articulo/${item.id}`}
+                        href={`/articulo/${article.id}`}
                         className="block text-[13px] leading-6 text-[#edf1f4] hover:text-white"
                       >
-                        {item.article.title}
+                        {article.title}
                       </Link>
-                      <p className="text-[10px] uppercase tracking-[0.08em] text-[#72808c]">{item.article.publishedAt}</p>
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-[#72808c]">{article.publishedAt}</p>
                     </div>
                   </li>
                 ))}
@@ -305,24 +360,24 @@ export default async function Home() {
                 </Link>
               </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {analysisCards.map((card, index) => (
+                {analysisCards.map((article, index) => (
                   <Link
-                    key={card.id}
-                    href={`/articulo/${card.id}`}
+                    key={article.id}
+                    href={`/articulo/${article.id}`}
                     className={index === 3 ? "md:col-span-2 xl:col-span-1" : ""}
                   >
                     <div className="relative h-[160px] overflow-hidden bg-[#0a141d]">
                       <ArticleVisual
-                        article={card.article}
+                        article={article}
                         className="aspect-[4/3] h-full w-full"
                         sizes="(max-width: 768px) 50vw, 25vw"
                       />
                       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,12,0.05)_0%,rgba(3,7,12,0.84)_100%)]" />
                       <div className="absolute inset-x-0 bottom-0 p-4">
                         <p className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">
-                          {card.article.tag}
+                          {article.tag}
                         </p>
-                        <h4 className="mt-2 text-[13px] leading-5 text-white">{card.article.title}</h4>
+                        <h4 className="mt-2 text-[13px] leading-5 text-white">{article.title}</h4>
                       </div>
                     </div>
                   </Link>
