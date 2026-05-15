@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { DraftQueue } from "@/components/editorial/draft-queue";
+import { AdminSessionBar } from "@/components/admin/admin-session-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { requireAdminSession } from "@/lib/auth/server";
 import { getDraftQueue, getEditorialSummary } from "@/lib/editorial";
 
 export const metadata: Metadata = {
@@ -14,12 +16,14 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminDraftsPage() {
+  const session = await requireAdminSession();
   const [drafts, summary] = await Promise.all([getDraftQueue(), getEditorialSummary()]);
 
   return (
     <div className="min-h-screen bg-[#05090f] text-white">
       <SiteHeader />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <AdminSessionBar email={session.email} />
         <section className="border border-[#1b242d] bg-[#08111a] p-6 sm:p-8">
           <p className="text-[11px] uppercase tracking-[0.12em] text-[#b5ff2a]">Admin interno</p>
           <h1 className="mt-4 font-display text-4xl font-semibold text-white sm:text-5xl">
