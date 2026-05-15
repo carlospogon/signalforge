@@ -10,14 +10,6 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-function toSpanishDate(value: string) {
-  return new Intl.DateTimeFormat("es-ES", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  }).format(new Date(value));
-}
-
 const categoryLabels: Record<ImportedSignal["categoriaSugerida"], string> = {
   ia: "IA",
   ciencia: "ciencia",
@@ -30,94 +22,171 @@ const categoryLabels: Record<ImportedSignal["categoriaSugerida"], string> = {
   laboratorio: "laboratorio"
 };
 
+const englishReplacements = [
+  ["clean up emissions", "reducir emisiones"],
+  ["the only source for", "la única fuente de"],
+  ["source for", "fuente de"],
+  ["different type of rock", "otro tipo de roca"],
+  ["different type", "tipo alternativo"],
+  ["portland cement", "cemento Portland"],
+  ["could", "podría"],
+  ["might", "podría"],
+  ["may", "podría"],
+  ["new", "nuevo"],
+  ["latest", "último"],
+  ["shows", "muestra"],
+  ["show", "mostrar"],
+  ["finds", "detecta"],
+  ["find", "detectar"],
+  ["reveals", "revela"],
+  ["reveal", "revelar"],
+  ["launches", "lanza"],
+  ["launch", "lanzar"],
+  ["builds", "construye"],
+  ["build", "construir"],
+  ["uses", "usa"],
+  ["using", "usando"],
+  ["researchers", "investigadores"],
+  ["researcher", "investigador"],
+  ["study", "estudio"],
+  ["paper", "artículo"],
+  ["report", "informe"],
+  ["company", "empresa"],
+  ["startup", "startup"],
+  ["chip", "chip"],
+  ["model", "modelo"],
+  ["data center", "centro de datos"],
+  ["battery", "batería"],
+  ["gene", "gen"],
+  ["genes", "genes"],
+  ["therapy", "terapia"],
+  ["planet", "planeta"],
+  ["satellite", "satélite"],
+  ["emissions", "emisiones"],
+  ["cement", "cemento"],
+  ["rock", "roca"],
+  ["from", "de"],
+  ["with", "con"],
+  ["without", "sin"],
+  ["into", "en"],
+  ["for", "para"],
+  ["of", "de"]
+] as const;
+
+function normalizeWhitespace(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function toSentenceCase(value: string) {
+  if (!value) {
+    return value;
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function translateFragments(value: string) {
+  let output = value;
+
+  for (const [search, replacement] of englishReplacements) {
+    const pattern = new RegExp(`\\b${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
+    output = output.replace(pattern, replacement);
+  }
+
+  return output;
+}
+
+function rewriteSourceText(value: string) {
+  const normalized = normalizeWhitespace(value).replace(/^[“"'`]+|[”"'`]+$/g, "");
+  const translated = translateFragments(normalized);
+  return restoreSpanishText(toSentenceCase(normalizeWhitespace(translated))).replace(/\.$/, "");
+}
+
 function inferTags(signal: ImportedSignal) {
   const labels = new Set<string>([
     categoryLabels[signal.categoriaSugerida].toUpperCase(),
     signal.fuente.nombre,
-    signal.clasificacion.formatoSugerido === "analysis" ? "Contexto" : "Radar"
+    signal.clasificacion.formatoSugerido === "analysis" ? "Análisis" : "Radar"
   ]);
 
   signal.palabrasClave
-    .filter((word) => word.length > 2)
+    .filter((word: string) => word.length > 2)
     .slice(0, 4)
-    .forEach((word) => labels.add(restoreSpanishText(word)));
+    .forEach((word: string) => labels.add(restoreSpanishText(word)));
 
   return [...labels];
 }
 
-function buildTitle(signal: ImportedSignal) {
+function buildHeadline(signal: ImportedSignal) {
+  const candidate = signal.resumenOriginal.length > 36 ? signal.resumenOriginal : signal.tituloOriginal;
+  return rewriteSourceText(candidate);
+}
+
+function buildEntradilla(signal: ImportedSignal, headline: string) {
   const sourceLabel = signal.fuente.nombre;
   const categoryLabel = categoryLabels[signal.categoriaSugerida];
 
   if (signal.clasificacion.formatoSugerido === "analysis") {
-    return `Qué implica la última señal de ${sourceLabel} para ${categoryLabel}`;
-  }
-
-  return `Radar Synaptik: nueva señal de ${sourceLabel} en ${categoryLabel}`;
-}
-
-function buildEntradilla(signal: ImportedSignal) {
-  if (signal.clasificacion.formatoSugerido === "analysis") {
     return restoreSpanishText(
-      `Borrador editorial en español para contextualizar la señal, separar el hecho principal del ruido y decidir si merece una pieza de desarrollo. Punto de partida: ${signal.resumenOriginal}`
+      `${headline}. La clave ahora es entender si este movimiento de ${sourceLabel} cambia de verdad el contexto de ${categoryLabel} o si solo añade ruido al ciclo informativo.`
     );
   }
 
   return restoreSpanishText(
-    `Nota de radar preparada en español para registrar el movimiento, preservar trazabilidad y señalar por qué conviene seguirlo de cerca. Resumen inicial: ${signal.resumenOriginal}`
+    `${headline}. La noticia abre una pista relevante para ${categoryLabel} y merece seguimiento porque puede anticipar cambios más amplios en investigación, industria o despliegue.`
   );
 }
 
-function buildCategoryContext(signal: ImportedSignal) {
+function buildWhyItMatters(signal: ImportedSignal) {
   switch (signal.categoriaSugerida) {
     case "ia":
-      return "Puede afectar a producto, despliegue, costes de inferencia, adopción empresarial o posicionamiento competitivo en IA.";
+      return "Si el movimiento se consolida, puede afectar a producto, costes de inferencia, adopción empresarial y ventaja competitiva en IA.";
     case "tecnologia":
-      return "Puede mover hoja de ruta de producto, infraestructura, integración o estrategia de plataforma.";
+      return "El interés real está en si esto cambia la hoja de ruta de producto, la infraestructura o la posición competitiva del sector.";
     case "ciencia":
-      return "Importa si cambia el consenso experimental, abre una nueva línea de investigación o mejora la evidencia disponible.";
+      return "Lo importante es si aporta evidencia nueva, corrige una limitación previa o abre una vía experimental con recorrido.";
     case "espacio":
-      return "Puede alterar calendario de lanzamientos, capacidad orbital, observación o competencia geoestratégica.";
+      return "Lo relevante es si altera capacidad orbital, calendario de misiones o equilibrio entre actores públicos y privados.";
     case "salud":
-      return "Conviene revisar impacto clínico, calidad de la evidencia, límites del estudio y madurez regulatoria.";
+      return "La lectura útil pasa por medir solidez clínica, calidad de la evidencia y distancia real hasta una aplicación médica.";
     case "biotech":
-      return "Lo relevante es si la señal cambia capacidad de descubrimiento, validación o escalado en biotecnología.";
+      return "La señal importa si mejora validación, descubrimiento o escalado en biotecnología más allá del titular inicial.";
     case "ciberseguridad":
-      return "Debe leerse en clave de superficie de ataque, defensa operativa, exposición y respuesta.";
+      return "Lo que cuenta es si cambia superficie de ataque, exposición operativa o capacidad real de defensa.";
     case "laboratorio":
-      return "Puede servir como prueba comparativa, benchmark o experimento replicable para piezas de laboratorio.";
+      return "La pieza merece atención si sirve como benchmark, prueba replicable o experimento útil para comparar enfoques.";
     case "opinion":
       return "La categoría Opinión se reserva a publicación manual y no debería generarse automáticamente.";
   }
 }
 
-function buildVerificationLine(signal: ImportedSignal) {
-  if (signal.clasificacion.riesgoEditorial === "alto") {
-    return "Antes de publicar hay que contrastar términos, revisar evidencia primaria y evitar extrapolaciones de marketing o investigación preliminar.";
+function buildNextStep(signal: ImportedSignal) {
+  switch (signal.clasificacion.riesgoEditorial) {
+    case "alto":
+      return "Antes de elevar esta pieza conviene contrastar la fuente primaria, revisar límites metodológicos y evitar conclusiones que la evidencia todavía no sostiene.";
+    case "medio":
+      return "El siguiente paso editorial es comprobar alcance real, actores implicados y si el titular simplifica demasiado lo que la fuente cuenta.";
+    case "bajo":
+      return "Si aparecen confirmaciones adicionales o impacto de producto claro, esta señal puede escalar a una pieza de mayor desarrollo.";
   }
-
-  if (signal.clasificacion.riesgoEditorial === "medio") {
-    return "Conviene comprobar alcance real, actores implicados, grado de despliegue y si existen matices relevantes en la fuente original.";
-  }
-
-  return "La pieza parece apta para seguimiento, pero aún necesita lectura humana para decidir si basta con radar o merece desarrollo.";
 }
 
-function buildBody(signal: ImportedSignal) {
+function buildBody(signal: ImportedSignal, headline: string) {
   const sourceLabel = signal.fuente.nombre;
+  const summary = rewriteSourceText(signal.resumenOriginal || signal.tituloOriginal);
+  const titleContext = rewriteSourceText(signal.tituloOriginal);
 
   return [
     restoreSpanishText(
-      `La señal se capturó el ${toSpanishDate(signal.fechaIngesta)} desde ${sourceLabel}. El titular original es "${signal.tituloOriginal}" y el resumen disponible apunta a esto: ${signal.resumenOriginal}`
+      `${sourceLabel} pone sobre la mesa una idea concreta: ${headline.toLowerCase()}. La referencia original se apoya en el enfoque resumido como "${summary}" y apunta a un posible cambio de lectura dentro de ${categoryLabels[signal.categoriaSugerida]}.`
     ),
     restoreSpanishText(
-      `En términos editoriales, lo importante no es repetir la nota original, sino decidir qué cambia de verdad para Synaptik y para los lectores que siguen ${categoryLabels[signal.categoriaSugerida]}.`
+      `Más allá del titular, la pregunta útil es qué cambia de fondo. ${buildWhyItMatters(signal)}`
     ),
-    restoreSpanishText(buildCategoryContext(signal)),
     restoreSpanishText(
-      `Clasificación inicial: prioridad ${signal.clasificacion.prioridadPublicacion.toUpperCase()}, riesgo ${signal.clasificacion.riesgoEditorial.toUpperCase()} y formato sugerido ${signal.clasificacion.formatoSugerido === "analysis" ? "análisis" : "radar"}.`
+      `Por ahora, la pieza sugiere una hipótesis o un movimiento que merece seguimiento, pero todavía necesita contraste adicional. El ángulo más sólido para Synaptik es partir de "${titleContext}" y convertirlo en contexto comprensible para el lector.`
     ),
-    restoreSpanishText(buildVerificationLine(signal))
+    restoreSpanishText(buildNextStep(signal))
   ];
 }
 
@@ -134,7 +203,7 @@ function pickState(signal: ImportedSignal): DraftArticle["estado"] {
 }
 
 function pickAuthor(signal: ImportedSignal): DraftArticle["autor"] {
-  return signal.clasificacion.formatoSugerido === "analysis" ? "Mesa editorial Synaptik" : "Radar Synaptik";
+  return signal.clasificacion.formatoSugerido === "analysis" ? "Mesa editorial Synaptik" : "Redacción Synaptik";
 }
 
 export function generateDraftArticle(signal: ImportedSignal): DraftArticle {
@@ -142,16 +211,16 @@ export function generateDraftArticle(signal: ImportedSignal): DraftArticle {
     throw new Error("La categoría Opinión solo admite gestión manual.");
   }
 
-  const titulo = restoreSpanishText(buildTitle(signal));
+  const titulo = buildHeadline(signal);
   const slug = slugify(titulo);
-  const entradilla = buildEntradilla(signal);
+  const entradilla = buildEntradilla(signal, titulo);
 
   return {
     id: `draft-${signal.id}`,
     titulo,
     slug,
     entradilla,
-    cuerpo: buildBody(signal),
+    cuerpo: buildBody(signal, titulo),
     categoria: signal.categoriaSugerida,
     etiquetas: inferTags(signal),
     fuentesConsultadas: [
