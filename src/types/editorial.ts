@@ -80,6 +80,7 @@ export type DraftArticle = {
   id: string;
   titulo: string;
   slug: string;
+  subtitulo: string;
   entradilla: string;
   cuerpo: string[];
   categoria: EditorialCategory;

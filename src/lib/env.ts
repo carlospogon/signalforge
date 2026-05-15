@@ -19,5 +19,7 @@ export const env = {
   CRON_SECRET: process.env.CRON_SECRET ?? "",
   ADMIN_EMAIL: process.env.ADMIN_EMAIL ?? "",
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD ?? "",
-  ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET ?? ""
+  ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET ?? "",
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "",
+  OPENAI_MODEL: process.env.OPENAI_MODEL ?? "gpt-5.2"
 };

@@ -103,9 +103,7 @@ export function classifySignal(
   const accionSugerida =
     categoria === "opinion"
       ? "manual_only"
-      : signal.fuente.requiereRevision || riesgoEditorial !== "bajo"
-        ? "review_required"
-        : "autopublish_candidate";
+      : "review_required";
 
   return {
     categoria,

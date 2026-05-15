@@ -170,6 +170,7 @@ function mapDraftRow(row: typeof draftArticles.$inferSelect): DraftArticle {
     id: row.id,
     titulo: row.titulo,
     slug: row.slug,
+    subtitulo: row.subtitulo,
     entradilla: row.entradilla,
     cuerpo: row.cuerpo,
     categoria: row.categoria,
@@ -198,7 +199,7 @@ function mapPublishedArticleRow(
   const draftFuente = draftRow?.fuente as DraftArticle["fuente"] | undefined;
   const title = draftRow?.titulo ?? row.titulo;
   const excerpt = draftRow?.entradilla ?? row.excerpt;
-  const deck = draftRow?.entradilla ?? row.deck ?? undefined;
+  const deck = draftRow?.subtitulo ?? row.deck ?? undefined;
   const body = draftRow?.cuerpo ?? row.cuerpo;
 
   return {
@@ -230,7 +231,7 @@ function buildPublishedArticlePayload(draft: DraftArticle, publishedAt: Date) {
     slug: draft.slug,
     titulo: draft.titulo,
     excerpt: draft.entradilla,
-    deck: draft.entradilla,
+    deck: draft.subtitulo,
     cuerpo: draft.cuerpo,
     categoria: draft.categoria,
     autor: draft.autor,
@@ -338,6 +339,7 @@ async function upsertDraft(draft: DraftArticle) {
       sourceId: draft.fuente.id,
       titulo: draft.titulo,
       slug: draft.slug,
+      subtitulo: draft.subtitulo,
       entradilla: draft.entradilla,
       cuerpo: draft.cuerpo,
       categoria: draft.categoria,
@@ -362,6 +364,7 @@ async function upsertDraft(draft: DraftArticle) {
       set: {
         titulo: draft.titulo,
         slug: draft.slug,
+        subtitulo: draft.subtitulo,
         entradilla: draft.entradilla,
         cuerpo: draft.cuerpo,
         categoria: draft.categoria,
@@ -401,7 +404,7 @@ export async function refreshEditorialData() {
 
         try {
           await upsertDraft({
-            ...generateDraftArticle(imported),
+            ...(await generateDraftArticle(imported)),
             id: `draft-${signalId}`,
             originalSignalId: signalId
           });

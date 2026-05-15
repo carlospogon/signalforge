@@ -107,6 +107,7 @@ export const draftArticles = pgTable(
       .references(() => sources.id, { onDelete: "restrict" }),
     titulo: text("titulo").notNull(),
     slug: varchar("slug", { length: 255 }).notNull(),
+    subtitulo: text("subtitulo").notNull(),
     entradilla: text("entradilla").notNull(),
     cuerpo: text("cuerpo").array().notNull(),
     categoria: categoryEnum("categoria").notNull(),

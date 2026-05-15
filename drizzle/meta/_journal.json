@@ -29,6 +29,13 @@
       "when": 1778865253385,
       "tag": "0003_secret_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778874550513,
+      "tag": "0004_confused_caretaker",
+      "breakpoints": true
     }
   ]
 }
