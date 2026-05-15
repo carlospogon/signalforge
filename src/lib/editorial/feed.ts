@@ -14,6 +14,9 @@ type FeedEntry = {
   content?: unknown;
   description?: unknown;
   category?: string | string[] | Array<string | { "#text"?: string }>;
+  enclosure?: { url?: string; type?: string } | Array<{ url?: string; type?: string }>;
+  "media:content"?: { url?: string; medium?: string } | Array<{ url?: string; medium?: string }>;
+  "media:thumbnail"?: { url?: string } | Array<{ url?: string }>;
 };
 
 const parser = new XMLParser({
@@ -115,6 +118,39 @@ function pickPublishedAt(entry: FeedEntry) {
   return entry.isoDate ?? entry.published ?? entry.updated ?? entry.pubDate ?? new Date().toISOString();
 }
 
+function pickImageFromHtml(value: unknown) {
+  const text = toText(value);
+  const match = text.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return match?.[1];
+}
+
+function pickImage(entry: FeedEntry) {
+  const enclosure = toArray(entry.enclosure).find((item) => item.url && item.type?.startsWith("image/"));
+
+  if (enclosure?.url) {
+    return enclosure.url;
+  }
+
+  const mediaContent = toArray(entry["media:content"]).find((item) => item.url);
+
+  if (mediaContent?.url) {
+    return mediaContent.url;
+  }
+
+  const mediaThumbnail = toArray(entry["media:thumbnail"]).find((item) => item.url);
+
+  if (mediaThumbnail?.url) {
+    return mediaThumbnail.url;
+  }
+
+  return (
+    pickImageFromHtml(entry.content) ??
+    pickImageFromHtml(entry.summary) ??
+    pickImageFromHtml(entry.description) ??
+    undefined
+  );
+}
+
 function normalizeEntry(source: EditorialSource, entry: FeedEntry, index: number): SourceSignal | null {
   const tituloOriginal = stripHtml(entry.title ?? "");
   const urlOriginal = pickEntryLink(entry.link);
@@ -134,7 +170,9 @@ function normalizeEntry(source: EditorialSource, entry: FeedEntry, index: number
     guidOriginal: guid || undefined,
     fechaPublicacion: new Date(pickPublishedAt(entry)).toISOString(),
     resumenOriginal: pickSummary(entry),
-    palabrasClave: pickKeywords(entry)
+    palabrasClave: pickKeywords(entry),
+    imagenUrl: pickImage(entry),
+    imagenAlt: tituloOriginal
   };
 }
 

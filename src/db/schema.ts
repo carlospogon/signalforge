@@ -169,6 +169,8 @@ export const publishedArticles = pgTable(
     tiempoLectura: varchar("tiempo_lectura", { length: 32 }).notNull(),
     accent: varchar("accent", { length: 255 }).notNull(),
     tag: varchar("tag", { length: 64 }).notNull(),
+    visualUrl: text("visual_url"),
+    visualAlt: text("visual_alt"),
     publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()

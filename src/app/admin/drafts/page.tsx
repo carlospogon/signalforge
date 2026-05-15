@@ -8,7 +8,7 @@ import { getDraftQueue, getEditorialSummary } from "@/lib/editorial";
 
 export const metadata: Metadata = {
   title: "Admin Drafts",
-  description: "Cola interna de borradores automatizados y revision editorial de Synaptik.",
+  description: "Cola interna de borradores automatizados y revisión editorial de Synaptik.",
   robots: {
     index: false,
     follow: false
@@ -34,7 +34,7 @@ export default async function AdminDraftsPage() {
           </h1>
           <p className="mt-5 max-w-3xl text-[15px] leading-8 text-[#b8c1c9]">
             Panel editorial interno para revisar borradores, moverlos entre estados y publicar
-            piezas reales desde la base de datos sin tocar el contenido estatico historico.
+            piezas reales desde la base de datos sin tocar el contenido estático histórico.
           </p>
 
           <div className="mt-8 grid gap-px bg-[#1b242d] sm:grid-cols-2 xl:grid-cols-4">
@@ -43,11 +43,11 @@ export default async function AdminDraftsPage() {
               <p className="mt-2 text-[24px] font-semibold text-white">{summary.sourceCount}</p>
             </div>
             <div className="bg-[#0b131c] px-5 py-4">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#8e99a3]">Senales</p>
+              <p className="text-[11px] uppercase tracking-[0.08em] text-[#8e99a3]">Señales</p>
               <p className="mt-2 text-[24px] font-semibold text-white">{summary.signalCount}</p>
             </div>
             <div className="bg-[#0b131c] px-5 py-4">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#8e99a3]">Revision</p>
+              <p className="text-[11px] uppercase tracking-[0.08em] text-[#8e99a3]">Revisión</p>
               <p className="mt-2 text-[24px] font-semibold text-white">{summary.reviewCount}</p>
             </div>
             <div className="bg-[#0b131c] px-5 py-4">
@@ -58,7 +58,7 @@ export default async function AdminDraftsPage() {
 
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             <div className="border border-[#1b242d] bg-[#0b131c] px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.08em] text-[#7f8d98]">Necesitan revision</p>
+              <p className="text-[10px] uppercase tracking-[0.08em] text-[#7f8d98]">Necesitan revisión</p>
               <p className="mt-2 text-[18px] font-semibold text-white">{needsReviewCount}</p>
             </div>
             <div className="border border-[#1b242d] bg-[#0b131c] px-4 py-3">

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { articleVisuals } from "@/data/article-visuals";
 import { Article } from "@/types/article";
 import { EditorialImage } from "@/components/ui/editorial-image";
@@ -8,6 +9,9 @@ type ArticleVisualProps = {
   priority?: boolean;
   sizes?: string;
   presentation?: "cover" | "framed";
+  imageClassName?: string;
+  overlayClassName?: string;
+  overlayStyle?: CSSProperties;
 };
 
 export function ArticleVisual({
@@ -15,11 +19,31 @@ export function ArticleVisual({
   className,
   priority = false,
   sizes,
-  presentation = "cover"
+  presentation = "cover",
+  imageClassName = "",
+  overlayClassName = "",
+  overlayStyle
 }: ArticleVisualProps) {
-  const visual = articleVisuals[article.id];
+  const visual = article.visual ?? articleVisuals[article.id];
 
   if (visual?.mode === "asset" && visual.src) {
+    if (visual.src.startsWith("http://") || visual.src.startsWith("https://")) {
+      return (
+        <div className={`relative overflow-hidden bg-slate-900 ${className}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={visual.src}
+            alt={visual.alt ?? article.title}
+            className={`h-full w-full object-cover ${imageClassName}`}
+            style={{ objectPosition: visual.objectPosition ?? "center center" }}
+          />
+          {overlayClassName || overlayStyle ? (
+            <div className={`absolute inset-0 ${overlayClassName}`} style={overlayStyle} />
+          ) : null}
+        </div>
+      );
+    }
+
     return (
       <EditorialImage
         src={visual.src}

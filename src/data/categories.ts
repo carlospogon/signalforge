@@ -15,32 +15,32 @@ export const categories: Category[] = [
   },
   {
     slug: "tecnologia",
-    label: "Tecnologia",
-    description: "Industria, plataformas y cambios de producto con lectura estrategica.",
+    label: "Tecnología",
+    description: "Industria, plataformas y cambios de producto con lectura estratégica.",
     icon: "TX"
   },
   {
     slug: "espacio",
     label: "Espacio",
-    description: "Lanzamientos, satelites y competencia orbital.",
+    description: "Lanzamientos, satélites y competencia orbital.",
     icon: "SP"
   },
   {
     slug: "salud",
     label: "Salud",
-    description: "Medicina, terapias de precision y sistemas sanitarios con base cientifica.",
+    description: "Medicina, terapias de precisión y sistemas sanitarios con base científica.",
     icon: "HL"
   },
   {
     slug: "energia",
-    label: "Energia",
-    description: "Infraestructura electrica, transicion industrial y economia del consumo intensivo.",
+    label: "Energía",
+    description: "Infraestructura eléctrica, transición industrial y economía del consumo intensivo.",
     icon: "EN"
   },
   {
     slug: "biotech",
     label: "Biotech",
-    description: "Salud, bioingenieria y ciencia aplicada.",
+    description: "Salud, bioingeniería y ciencia aplicada.",
     icon: "BT"
   },
   {
@@ -51,7 +51,7 @@ export const categories: Category[] = [
   },
   {
     slug: "opinion",
-    label: "Opinion",
+    label: "Opinión",
     description: "Piezas firmadas con tesis claras y argumentos verificables.",
     icon: "OP"
   },

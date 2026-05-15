@@ -1,4 +1,5 @@
-import { ImportedSignal, DraftArticle } from "@/types/editorial";
+import { DraftArticle, ImportedSignal } from "@/types/editorial";
+import { restoreSpanishText } from "@/lib/spanish";
 
 function slugify(value: string) {
   return value
@@ -17,42 +18,106 @@ function toSpanishDate(value: string) {
   }).format(new Date(value));
 }
 
+const categoryLabels: Record<ImportedSignal["categoriaSugerida"], string> = {
+  ia: "IA",
+  ciencia: "ciencia",
+  tecnologia: "tecnología",
+  espacio: "espacio",
+  salud: "salud",
+  biotech: "biotech",
+  ciberseguridad: "ciberseguridad",
+  opinion: "opinión",
+  laboratorio: "laboratorio"
+};
+
 function inferTags(signal: ImportedSignal) {
   const labels = new Set<string>([
-    signal.categoriaSugerida.toUpperCase(),
+    categoryLabels[signal.categoriaSugerida].toUpperCase(),
     signal.fuente.nombre,
     signal.clasificacion.formatoSugerido === "analysis" ? "Contexto" : "Radar"
   ]);
 
-  signal.tituloOriginal
-    .split(" ")
-    .filter((word) => word.length > 5)
-    .slice(0, 2)
-    .forEach((word) => labels.add(word.replace(/[^A-Za-z0-9.-]/g, "")));
+  signal.palabrasClave
+    .filter((word) => word.length > 2)
+    .slice(0, 4)
+    .forEach((word) => labels.add(restoreSpanishText(word)));
 
   return [...labels];
 }
 
 function buildTitle(signal: ImportedSignal) {
+  const sourceLabel = signal.fuente.nombre;
+  const categoryLabel = categoryLabels[signal.categoriaSugerida];
+
   if (signal.clasificacion.formatoSugerido === "analysis") {
-    return `Que significa para Synaptik: ${signal.tituloOriginal}`;
+    return `Qué implica la última señal de ${sourceLabel} para ${categoryLabel}`;
   }
 
-  return `Radar Synaptik: ${signal.tituloOriginal}`;
+  return `Radar Synaptik: nueva señal de ${sourceLabel} en ${categoryLabel}`;
+}
+
+function buildEntradilla(signal: ImportedSignal) {
+  if (signal.clasificacion.formatoSugerido === "analysis") {
+    return restoreSpanishText(
+      `Borrador editorial en español para contextualizar la señal, separar el hecho principal del ruido y decidir si merece una pieza de desarrollo. Punto de partida: ${signal.resumenOriginal}`
+    );
+  }
+
+  return restoreSpanishText(
+    `Nota de radar preparada en español para registrar el movimiento, preservar trazabilidad y señalar por qué conviene seguirlo de cerca. Resumen inicial: ${signal.resumenOriginal}`
+  );
+}
+
+function buildCategoryContext(signal: ImportedSignal) {
+  switch (signal.categoriaSugerida) {
+    case "ia":
+      return "Puede afectar a producto, despliegue, costes de inferencia, adopción empresarial o posicionamiento competitivo en IA.";
+    case "tecnologia":
+      return "Puede mover hoja de ruta de producto, infraestructura, integración o estrategia de plataforma.";
+    case "ciencia":
+      return "Importa si cambia el consenso experimental, abre una nueva línea de investigación o mejora la evidencia disponible.";
+    case "espacio":
+      return "Puede alterar calendario de lanzamientos, capacidad orbital, observación o competencia geoestratégica.";
+    case "salud":
+      return "Conviene revisar impacto clínico, calidad de la evidencia, límites del estudio y madurez regulatoria.";
+    case "biotech":
+      return "Lo relevante es si la señal cambia capacidad de descubrimiento, validación o escalado en biotecnología.";
+    case "ciberseguridad":
+      return "Debe leerse en clave de superficie de ataque, defensa operativa, exposición y respuesta.";
+    case "laboratorio":
+      return "Puede servir como prueba comparativa, benchmark o experimento replicable para piezas de laboratorio.";
+    case "opinion":
+      return "La categoría Opinión se reserva a publicación manual y no debería generarse automáticamente.";
+  }
+}
+
+function buildVerificationLine(signal: ImportedSignal) {
+  if (signal.clasificacion.riesgoEditorial === "alto") {
+    return "Antes de publicar hay que contrastar términos, revisar evidencia primaria y evitar extrapolaciones de marketing o investigación preliminar.";
+  }
+
+  if (signal.clasificacion.riesgoEditorial === "medio") {
+    return "Conviene comprobar alcance real, actores implicados, grado de despliegue y si existen matices relevantes en la fuente original.";
+  }
+
+  return "La pieza parece apta para seguimiento, pero aún necesita lectura humana para decidir si basta con radar o merece desarrollo.";
 }
 
 function buildBody(signal: ImportedSignal) {
   const sourceLabel = signal.fuente.nombre;
-  const riskLine =
-    signal.clasificacion.riesgoEditorial === "alto"
-      ? "El tema requiere verificacion humana antes de cualquier decision de portada o boletin."
-      : "La senal parece util para radar editorial, pero todavia necesita contraste y lectura contextual propia.";
 
   return [
-    `Senal capturada el ${toSpanishDate(signal.fechaIngesta)} desde ${sourceLabel}. La pieza original apunta a ${signal.resumenOriginal.toLowerCase()}`,
-    "Este borrador no replica la fuente original. Resume el angulo potencial para Synaptik y deja preparada una lectura editorial propia.",
-    `Clasificacion inicial: categoria ${signal.categoriaSugerida.toUpperCase()}, prioridad ${signal.clasificacion.prioridadPublicacion.toUpperCase()} y riesgo ${signal.clasificacion.riesgoEditorial.toUpperCase()}.`,
-    riskLine
+    restoreSpanishText(
+      `La señal se capturó el ${toSpanishDate(signal.fechaIngesta)} desde ${sourceLabel}. El titular original es "${signal.tituloOriginal}" y el resumen disponible apunta a esto: ${signal.resumenOriginal}`
+    ),
+    restoreSpanishText(
+      `En términos editoriales, lo importante no es repetir la nota original, sino decidir qué cambia de verdad para Synaptik y para los lectores que siguen ${categoryLabels[signal.categoriaSugerida]}.`
+    ),
+    restoreSpanishText(buildCategoryContext(signal)),
+    restoreSpanishText(
+      `Clasificación inicial: prioridad ${signal.clasificacion.prioridadPublicacion.toUpperCase()}, riesgo ${signal.clasificacion.riesgoEditorial.toUpperCase()} y formato sugerido ${signal.clasificacion.formatoSugerido === "analysis" ? "análisis" : "radar"}.`
+    ),
+    restoreSpanishText(buildVerificationLine(signal))
   ];
 }
 
@@ -74,15 +139,12 @@ function pickAuthor(signal: ImportedSignal): DraftArticle["autor"] {
 
 export function generateDraftArticle(signal: ImportedSignal): DraftArticle {
   if (signal.categoriaSugerida === "opinion") {
-    throw new Error("La categoria Opinion solo admite gestion manual.");
+    throw new Error("La categoría Opinión solo admite gestión manual.");
   }
 
-  const titulo = buildTitle(signal);
+  const titulo = restoreSpanishText(buildTitle(signal));
   const slug = slugify(titulo);
-  const entradilla =
-    signal.clasificacion.formatoSugerido === "analysis"
-      ? "Borrador editorial preparado para ampliar contexto, contrastar implicaciones y decidir si la senal merece una pieza de desarrollo."
-      : "Nota breve preparada para radar interno con foco en trazabilidad, contraste y accion editorial sugerida.";
+  const entradilla = buildEntradilla(signal);
 
   return {
     id: `draft-${signal.id}`,
@@ -107,7 +169,7 @@ export function generateDraftArticle(signal: ImportedSignal): DraftArticle {
     fechaCaptura: signal.fechaIngesta,
     tiempoLectura: signal.clasificacion.formatoSugerido === "analysis" ? "4 min" : "2 min",
     seo: {
-      canonicalPath: `/radar/${slug}`,
+      canonicalPath: `/articulo/${slug}`,
       openGraphTitle: titulo,
       openGraphDescription: entradilla,
       twitterTitle: titulo,
@@ -119,7 +181,11 @@ export function generateDraftArticle(signal: ImportedSignal): DraftArticle {
     fuente: {
       id: signal.fuente.id,
       nombre: signal.fuente.nombre,
-      urlOriginal: signal.urlOriginal
+      urlOriginal: signal.urlOriginal,
+      tituloOriginal: signal.tituloOriginal,
+      resumenOriginal: signal.resumenOriginal,
+      imagenUrl: signal.imagenUrl,
+      imagenAlt: signal.imagenAlt
     },
     riesgoEditorial: signal.clasificacion.riesgoEditorial,
     prioridadPublicacion: signal.clasificacion.prioridadPublicacion,

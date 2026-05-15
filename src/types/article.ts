@@ -22,6 +22,7 @@ export type Article = {
   tag: string;
   deck?: string;
   body: string[];
+  visual?: ArticleVisual;
 };
 
 export type ArticleVisual = {

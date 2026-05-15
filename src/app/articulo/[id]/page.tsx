@@ -85,9 +85,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         {relatedArticles.length > 0 ? (
           <section className="space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-3xl font-semibold text-white">Mas en {category?.label ?? article.category}</h2>
+              <h2 className="font-display text-3xl font-semibold text-white">Más en {category?.label ?? article.category}</h2>
               <Link href={`/categoria/${article.category}`} className="text-sm text-[#b5ff2a]">
-                Abrir seccion
+                Abrir sección
               </Link>
             </div>
             <ArticleList articles={relatedArticles} />

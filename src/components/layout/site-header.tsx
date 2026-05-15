@@ -3,12 +3,12 @@ import Link from "next/link";
 const navItems = [
   { label: "Inicio", href: "/" },
   { label: "Ciencia", href: "/categoria/ciencia" },
-  { label: "Tecnologia", href: "/categoria/tecnologia" },
+  { label: "Tecnología", href: "/categoria/tecnologia" },
   { label: "IA", href: "/categoria/ia" },
   { label: "Espacio", href: "/categoria/espacio" },
   { label: "Salud", href: "/categoria/salud" },
-  { label: "Energia", href: "/categoria/energia" },
-  { label: "Opinion", href: "/categoria/opinion" },
+  { label: "Energía", href: "/categoria/energia" },
+  { label: "Opinión", href: "/categoria/opinion" },
   { label: "Laboratorio", href: "/categoria/laboratorio" },
   { label: "Archivo", href: "/archivo" }
 ];
@@ -24,7 +24,7 @@ export function SiteHeader() {
                 <span className="text-lg leading-none">≡</span>
               </summary>
               <div className="absolute left-0 top-full mt-3 w-[min(20rem,calc(100vw-2rem))] border border-[#1b242d] bg-[#08111a] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b5ff2a]">Menu</p>
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b5ff2a]">Menú</p>
                 <nav className="grid gap-2">
                   {navItems.map((item) => (
                     <Link
@@ -65,7 +65,7 @@ export function SiteHeader() {
                   Synaptik
                 </p>
                 <p className="hidden text-[11px] uppercase tracking-[0.24em] text-[#b5ff2a] sm:block">
-                  Ciencia | Tecnologia | Futuro
+                  Ciencia | Tecnología | Futuro
                 </p>
               </div>
             </Link>

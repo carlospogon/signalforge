@@ -29,7 +29,7 @@ export async function loginAction(_: LoginState, formData: FormData): Promise<Lo
     await createAdminSession(email);
   } catch {
     return {
-      error: "La autenticacion no esta configurada todavia."
+      error: "La autenticación no está configurada todavía."
     };
   }
 

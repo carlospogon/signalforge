@@ -11,6 +11,7 @@ import { editorialSources } from "@/data/editorial-sources";
 import { generateDraftArticle } from "@/lib/editorial/drafts";
 import { fetchSourceSignals } from "@/lib/editorial/feed";
 import { classifySignal } from "@/lib/editorial/classify";
+import { restoreSpanishText } from "@/lib/spanish";
 import { DraftArticle, EditorialSource, ImportedSignal, SourceSignal } from "@/types/editorial";
 import { Article } from "@/types/article";
 
@@ -49,13 +50,13 @@ const categoryAccents: Record<DraftArticle["categoria"], string> = {
 const categoryTags: Record<DraftArticle["categoria"], string> = {
   ia: "IA",
   ciencia: "Ciencia",
-  tecnologia: "Tecnologia",
+  tecnologia: "Tecnología",
   espacio: "Espacio",
   salud: "Salud",
   biotech: "Biotech",
   ciberseguridad: "Ciberseguridad",
   laboratorio: "Laboratorio",
-  opinion: "Opinion"
+  opinion: "Opinión"
 };
 
 function formatPublishedLabel(value: Date) {
@@ -72,7 +73,7 @@ function mapDraftToTag(draft: DraftArticle) {
   }
 
   if (draft.tipo === "analysis") {
-    return "Analisis";
+    return "Análisis";
   }
 
   return categoryTags[draft.categoria];
@@ -108,8 +109,11 @@ function buildImportedSignal(entry: SourceSignal, source: EditorialSource): Impo
     fuente: source,
     fechaPublicacion: entry.fechaPublicacion,
     resumenOriginal: entry.resumenOriginal,
+    palabrasClave: entry.palabrasClave,
     fechaIngesta,
-    hashUnico
+    hashUnico,
+    imagenUrl: entry.imagenUrl,
+    imagenAlt: entry.imagenAlt
   };
   const clasificacion = classifySignal(signalBase);
 
@@ -144,9 +148,12 @@ function mapSignalRow(row: typeof importedSignals.$inferSelect, source: Editoria
     fuente: source,
     fechaPublicacion: row.fechaPublicacion.toISOString(),
     resumenOriginal: row.resumenOriginal,
+    palabrasClave: row.palabrasClave,
     categoriaSugerida: row.categoriaSugerida,
     fechaIngesta: row.fechaIngesta.toISOString(),
     hashUnico: row.hashUnico,
+    imagenUrl: undefined,
+    imagenAlt: undefined,
     clasificacion: {
       categoria: row.categoriaSugerida,
       relevancia: row.relevancia,
@@ -184,19 +191,36 @@ function mapDraftRow(row: typeof draftArticles.$inferSelect): DraftArticle {
   };
 }
 
-function mapPublishedArticleRow(row: typeof publishedArticles.$inferSelect): Article {
+function mapPublishedArticleRow(
+  row: typeof publishedArticles.$inferSelect,
+  draftRow?: typeof draftArticles.$inferSelect | null
+): Article {
+  const draftFuente = draftRow?.fuente as DraftArticle["fuente"] | undefined;
+  const title = draftRow?.titulo ?? row.titulo;
+  const excerpt = draftRow?.entradilla ?? row.excerpt;
+  const deck = draftRow?.entradilla ?? row.deck ?? undefined;
+  const body = draftRow?.cuerpo ?? row.cuerpo;
+
   return {
     id: row.slug,
-    title: row.titulo,
-    excerpt: row.excerpt,
+    title: restoreSpanishText(title),
+    excerpt: restoreSpanishText(excerpt),
     category: row.categoria,
     author: row.autor,
     readingTime: row.tiempoLectura,
     publishedAt: formatPublishedLabel(row.publishedAt),
     accent: row.accent,
-    tag: row.tag,
-    deck: row.deck ?? undefined,
-    body: row.cuerpo
+    tag: restoreSpanishText(row.tag),
+    deck: deck ? restoreSpanishText(deck) : undefined,
+    body: body.map((paragraph) => restoreSpanishText(paragraph)),
+    visual:
+      row.visualUrl || draftFuente?.imagenUrl
+      ? {
+          mode: "asset",
+          src: row.visualUrl ?? draftFuente?.imagenUrl ?? "",
+          alt: row.visualAlt ?? draftFuente?.imagenAlt ?? restoreSpanishText(title)
+        }
+      : undefined
   };
 }
 
@@ -213,6 +237,8 @@ function buildPublishedArticlePayload(draft: DraftArticle, publishedAt: Date) {
     tiempoLectura: draft.tiempoLectura,
     accent: categoryAccents[draft.categoria],
     tag: mapDraftToTag(draft),
+    visualUrl: draft.fuente.imagenUrl ?? null,
+    visualAlt: draft.fuente.imagenAlt ?? draft.titulo,
     publishedAt,
     updatedAt: new Date()
   };
@@ -442,13 +468,30 @@ export async function listDraftArticles(limit = 50) {
 }
 
 export async function listPublishedArticles() {
-  const rows = await db.select().from(publishedArticles).orderBy(desc(publishedArticles.publishedAt));
-  return rows.map(mapPublishedArticleRow);
+  const rows = await db
+    .select({
+      article: publishedArticles,
+      draft: draftArticles
+    })
+    .from(publishedArticles)
+    .leftJoin(draftArticles, eq(draftArticles.id, publishedArticles.draftId))
+    .orderBy(desc(publishedArticles.publishedAt));
+
+  return rows.map(({ article, draft }) => mapPublishedArticleRow(article, draft));
 }
 
 export async function getPublishedArticleBySlug(slug: string) {
-  const [row] = await db.select().from(publishedArticles).where(eq(publishedArticles.slug, slug)).limit(1);
-  return row ? mapPublishedArticleRow(row) : null;
+  const [row] = await db
+    .select({
+      article: publishedArticles,
+      draft: draftArticles
+    })
+    .from(publishedArticles)
+    .leftJoin(draftArticles, eq(draftArticles.id, publishedArticles.draftId))
+    .where(eq(publishedArticles.slug, slug))
+    .limit(1);
+
+  return row ? mapPublishedArticleRow(row.article, row.draft) : null;
 }
 
 async function recordPublicationReview(

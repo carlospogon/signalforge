@@ -28,7 +28,7 @@ export function LoginForm() {
 
       <div className="space-y-2">
         <label htmlFor="password" className="text-[11px] uppercase tracking-[0.08em] text-[#8e99a3]">
-          Contrasena
+          Contraseña
         </label>
         <input
           id="password"
@@ -36,7 +36,7 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           className="w-full border border-[#22303b] bg-[#0b131c] px-4 py-3 text-[14px] text-white outline-none transition focus:border-[#b5ff2a]"
-          placeholder="Introduce tu contrasena"
+          placeholder="Introduce tu contraseña"
         />
       </div>
 

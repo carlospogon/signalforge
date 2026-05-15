@@ -1,7 +1,19 @@
 import { allArticles } from "@/data/articles";
 import { categories } from "@/data/categories";
 import { listPublishedArticles } from "@/lib/editorial/store";
+import { restoreSpanishText } from "@/lib/spanish";
 import { Article, CategorySlug } from "@/types/article";
+
+function sanitizeArticle(article: Article): Article {
+  return {
+    ...article,
+    title: restoreSpanishText(article.title),
+    excerpt: restoreSpanishText(article.excerpt),
+    tag: restoreSpanishText(article.tag),
+    deck: article.deck ? restoreSpanishText(article.deck) : undefined,
+    body: article.body.map((paragraph) => restoreSpanishText(paragraph))
+  };
+}
 
 function mergeArticles(staticArticles: Article[], publishedArticles: Article[]) {
   const merged = [...publishedArticles, ...staticArticles];
@@ -26,7 +38,7 @@ export function getCategoryBySlug(slug: CategorySlug) {
 
 export async function getAllArticles() {
   const publishedArticles = await listPublishedArticles();
-  return mergeArticles(allArticles, publishedArticles);
+  return mergeArticles(allArticles.map(sanitizeArticle), publishedArticles);
 }
 
 export async function getFeaturedArticle() {

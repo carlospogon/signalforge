@@ -32,7 +32,7 @@ const stateTone = {
 const stateLabel = {
   imported: "Importado",
   draft: "Borrador",
-  needs_review: "Revision",
+  needs_review: "Revisión",
   approved: "Aprobado",
   published: "Publicado",
   rejected: "Rechazado"
@@ -73,6 +73,11 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
                 <div>
                   <p className="text-[15px] leading-6 text-[#edf2f5]">{draft.titulo}</p>
                   <p className="mt-2 max-w-2xl text-[12px] leading-6 text-[#9eabb5]">{draft.entradilla}</p>
+                  {draft.fuente.resumenOriginal ? (
+                    <p className="mt-2 max-w-2xl text-[12px] leading-6 text-[#7f8d98]">
+                      Origen: {draft.fuente.resumenOriginal}
+                    </p>
+                  ) : null}
                   <div className="mt-3 flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.08em] text-[#72808b]">
                     <span>{draft.tipo}</span>
                     <span>{draft.prioridadPublicacion}</span>
@@ -81,6 +86,16 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
                 </div>
 
                 <div className="space-y-2 text-[12px] text-[#c5ced5]">
+                  {draft.fuente.imagenUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={draft.fuente.imagenUrl}
+                      alt={draft.fuente.imagenAlt ?? draft.titulo}
+                      className="h-16 w-full rounded border border-[#1b242d] object-cover"
+                    />
+                    </>
+                  ) : null}
                   <p>{draft.fuente.nombre}</p>
                   <Link href={draft.fuente.urlOriginal} target="_blank" className="text-[#8eb8ff] hover:text-white">
                     Abrir original
@@ -99,7 +114,7 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
                   <DraftActionForm
                     draftId={draft.id}
                     intent="needs_review"
-                    label="Revision"
+                    label="Revisión"
                     className={actionButtonClassName}
                   />
                   <DraftActionForm
@@ -132,6 +147,9 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
                     </span>
                   </div>
                   <p className="text-[12px] leading-6 text-[#a4afb8]">{draft.entradilla}</p>
+                  {draft.fuente.resumenOriginal ? (
+                    <p className="text-[12px] leading-6 text-[#7f8d98]">Origen: {draft.fuente.resumenOriginal}</p>
+                  ) : null}
                 </div>
 
                 <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.08em] text-[#8e99a3]">
@@ -149,10 +167,20 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
                   >
                     Fuente
                   </Link>
+                  {draft.fuente.imagenUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={draft.fuente.imagenUrl}
+                      alt={draft.fuente.imagenAlt ?? draft.titulo}
+                      className="h-10 w-14 rounded border border-[#1b242d] object-cover"
+                    />
+                    </>
+                  ) : null}
                   <DraftActionForm
                     draftId={draft.id}
                     intent="needs_review"
-                    label="Revision"
+                    label="Revisión"
                     className={actionButtonClassName}
                   />
                   <DraftActionForm

@@ -46,6 +46,8 @@ export type SourceSignal = {
   fechaPublicacion: string;
   resumenOriginal: string;
   palabrasClave: string[];
+  imagenUrl?: string;
+  imagenAlt?: string;
 };
 
 export type EditorialClassification = {
@@ -65,9 +67,12 @@ export type ImportedSignal = {
   fuente: EditorialSource;
   fechaPublicacion: string;
   resumenOriginal: string;
+  palabrasClave: string[];
   categoriaSugerida: EditorialCategory;
   fechaIngesta: string;
   hashUnico: string;
+  imagenUrl?: string;
+  imagenAlt?: string;
   clasificacion: EditorialClassification;
 };
 
@@ -105,6 +110,10 @@ export type DraftArticle = {
     id: string;
     nombre: string;
     urlOriginal: string;
+    tituloOriginal?: string;
+    resumenOriginal?: string;
+    imagenUrl?: string;
+    imagenAlt?: string;
   };
   riesgoEditorial: EditorialRisk;
   prioridadPublicacion: EditorialPriority;
