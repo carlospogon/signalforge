@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { publishDraftAction, updateDraftStateAction } from "@/app/admin/drafts/actions";
+import { DraftActionForm } from "@/components/editorial/draft-action-form";
 import { DraftArticle } from "@/types/editorial";
 
 type DraftQueueProps = {
@@ -67,11 +67,6 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
 
       <div className="divide-y divide-[#1b242d]">
         {drafts.map((draft) => {
-          const approveAction = updateDraftStateAction.bind(null, draft.id, "approved");
-          const reviewAction = updateDraftStateAction.bind(null, draft.id, "needs_review");
-          const rejectAction = updateDraftStateAction.bind(null, draft.id, "rejected");
-          const publishAction = publishDraftAction.bind(null, draft.id);
-
           return (
             <article key={draft.id} className="px-5 py-5">
               <div className="hidden gap-4 xl:grid xl:grid-cols-[2fr_0.95fr_0.8fr_0.75fr_0.9fr_1.2fr]">
@@ -101,26 +96,30 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
                 </p>
 
                 <div className="flex flex-wrap gap-2">
-                  <form action={reviewAction}>
-                    <button type="submit" className={actionButtonClassName}>
-                      Revision
-                    </button>
-                  </form>
-                  <form action={approveAction}>
-                    <button type="submit" className={actionButtonClassName}>
-                      Aprobar
-                    </button>
-                  </form>
-                  <form action={publishAction}>
-                    <button type="submit" className="bg-[#b5ff2a] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#10170d] transition hover:bg-[#c6ff58]">
-                      Publicar
-                    </button>
-                  </form>
-                  <form action={rejectAction}>
-                    <button type="submit" className={actionButtonClassName}>
-                      Rechazar
-                    </button>
-                  </form>
+                  <DraftActionForm
+                    draftId={draft.id}
+                    intent="needs_review"
+                    label="Revision"
+                    className={actionButtonClassName}
+                  />
+                  <DraftActionForm
+                    draftId={draft.id}
+                    intent="approved"
+                    label="Aprobar"
+                    className={actionButtonClassName}
+                  />
+                  <DraftActionForm
+                    draftId={draft.id}
+                    intent="publish"
+                    label="Publicar"
+                    className="bg-[#b5ff2a] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#10170d] transition hover:bg-[#c6ff58] disabled:cursor-not-allowed disabled:opacity-70"
+                  />
+                  <DraftActionForm
+                    draftId={draft.id}
+                    intent="rejected"
+                    label="Rechazar"
+                    className={actionButtonClassName}
+                  />
                 </div>
               </div>
 
@@ -150,26 +149,30 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
                   >
                     Fuente
                   </Link>
-                  <form action={reviewAction}>
-                    <button type="submit" className={actionButtonClassName}>
-                      Revision
-                    </button>
-                  </form>
-                  <form action={approveAction}>
-                    <button type="submit" className={actionButtonClassName}>
-                      Aprobar
-                    </button>
-                  </form>
-                  <form action={publishAction}>
-                    <button type="submit" className="bg-[#b5ff2a] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#10170d]">
-                      Publicar
-                    </button>
-                  </form>
-                  <form action={rejectAction}>
-                    <button type="submit" className={actionButtonClassName}>
-                      Rechazar
-                    </button>
-                  </form>
+                  <DraftActionForm
+                    draftId={draft.id}
+                    intent="needs_review"
+                    label="Revision"
+                    className={actionButtonClassName}
+                  />
+                  <DraftActionForm
+                    draftId={draft.id}
+                    intent="approved"
+                    label="Aprobar"
+                    className={actionButtonClassName}
+                  />
+                  <DraftActionForm
+                    draftId={draft.id}
+                    intent="publish"
+                    label="Publicar"
+                    className="bg-[#b5ff2a] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#10170d] disabled:cursor-not-allowed disabled:opacity-70"
+                  />
+                  <DraftActionForm
+                    draftId={draft.id}
+                    intent="rejected"
+                    label="Rechazar"
+                    className={actionButtonClassName}
+                  />
                 </div>
               </div>
             </article>
