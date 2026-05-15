@@ -1,6 +1,6 @@
+import { buildEditorialSystemPrompt, buildEditorialUserPrompt } from "@/lib/editorial/prompts";
 import { env } from "@/lib/env";
 import { restoreSpanishText } from "@/lib/spanish";
-import { buildEditorialSystemPrompt, buildEditorialUserPrompt } from "@/lib/editorial/prompts";
 import { ImportedSignal } from "@/types/editorial";
 
 export type GeneratedEditorialArticle = {
@@ -11,26 +11,22 @@ export type GeneratedEditorialArticle = {
   tag: string;
 };
 
-const outputSchema = {
-  name: "synaptik_editorial_article",
-  strict: true,
-  schema: {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      title: { type: "string" },
-      subtitle: { type: "string" },
-      excerpt: { type: "string" },
-      body: {
-        type: "array",
-        minItems: 4,
-        maxItems: 5,
-        items: { type: "string" }
-      },
-      tag: { type: "string" }
+const responseSchema = {
+  type: "OBJECT",
+  properties: {
+    title: { type: "STRING" },
+    subtitle: { type: "STRING" },
+    excerpt: { type: "STRING" },
+    body: {
+      type: "ARRAY",
+      minItems: 4,
+      maxItems: 5,
+      items: { type: "STRING" }
     },
-    required: ["title", "subtitle", "excerpt", "body", "tag"]
-  }
+    tag: { type: "STRING" }
+  },
+  required: ["title", "subtitle", "excerpt", "body", "tag"],
+  propertyOrdering: ["title", "subtitle", "excerpt", "body", "tag"]
 } as const;
 
 function normalizeWhitespace(value: string) {
@@ -38,18 +34,18 @@ function normalizeWhitespace(value: string) {
 }
 
 function cleanModelText(value: string) {
-  return restoreSpanishText(normalizeWhitespace(value.replace(/^["'“”]+|["'“”]+$/g, "")));
+  return restoreSpanishText(normalizeWhitespace(value.replace(/^["']+|["']+$/g, "")));
 }
 
 function buildFallback(signal: ImportedSignal): GeneratedEditorialArticle {
   const source = signal.fuente.nombre;
   const summary = cleanModelText(signal.resumenOriginal || signal.tituloOriginal);
-  const title = summary.endsWith(".") ? summary.slice(0, -1) : summary;
+  const title = cleanModelText(summary.endsWith(".") ? summary.slice(0, -1) : summary);
   const subtitle = cleanModelText(
-    `${source} sitúa este movimiento en el centro de una conversación más amplia sobre ${signal.categoriaSugerida}, con consecuencias que todavía están abiertas.`
+    `${source} coloca esta senal dentro de una disputa mas amplia en ${signal.categoriaSugerida}, con implicaciones que todavia no estan cerradas.`
   );
   const excerpt = cleanModelText(
-    `${title}. La cuestión no es solo qué ha ocurrido, sino qué puede cambiar en el sector si esta señal se confirma.`
+    `${title}. La clave no es solo el anuncio, sino que cambia para los actores implicados y que recorrido real puede tener en el sector.`
   );
 
   return {
@@ -58,47 +54,47 @@ function buildFallback(signal: ImportedSignal): GeneratedEditorialArticle {
     excerpt,
     body: [
       cleanModelText(
-        `${source} ha puesto el foco en ${summary.toLowerCase()}. La noticia merece atención porque apunta a un cambio concreto, no solo a una actualización menor dentro del ciclo informativo.`
+        `${source} ha puesto sobre la mesa ${summary.toLowerCase()}. La noticia importa porque puede alterar prioridades industriales, cientificas o empresariales mas alla del titular inicial.`
       ),
       cleanModelText(
-        `El interés editorial está en qué actores quedan mejor posicionados, qué límites siguen presentes y si este movimiento altera de verdad el equilibrio del sector.`
+        `La lectura editorial empieza por identificar quien gana tiempo, quien queda bajo presion y que condiciona el siguiente movimiento del mercado o de la investigacion.`
       ),
       cleanModelText(
-        `Más allá del titular, la clave es medir si estamos ante una señal con recorrido industrial, científico o estratégico, o solo ante una promesa que todavía necesita validación.`
+        `Tambien conviene separar la promesa del despliegue real: no todas las senales cambian el equilibrio del sector, pero algunas si anticipan una reorganizacion de poder, inversion o regulacion.`
       ),
       cleanModelText(
-        `El siguiente paso para Synaptik es observar confirmaciones, reacción de competidores y posibles consecuencias regulatorias, económicas o de despliegue antes de elevar la pieza.`
+        `Para Synaptik, el valor esta en seguir confirmaciones, respuestas de competidores y efectos economicos o politicos antes de convertir esta pieza en una cobertura mas profunda.`
       )
     ],
-    tag: signal.clasificacion.formatoSugerido === "analysis" ? "Análisis" : "Radar"
+    tag: signal.clasificacion.formatoSugerido === "analysis" ? "Analisis" : "Radar"
   };
 }
 
-function extractOutputText(payload: unknown) {
+function extractGeminiText(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return "";
   }
 
   const record = payload as Record<string, unknown>;
+  const candidates = Array.isArray(record.candidates)
+    ? (record.candidates as Array<Record<string, unknown>>)
+    : [];
 
-  if (typeof record.output_text === "string") {
-    return record.output_text;
-  }
+  for (const candidate of candidates) {
+    const content =
+      candidate.content && typeof candidate.content === "object"
+        ? (candidate.content as Record<string, unknown>)
+        : null;
 
-  const output = Array.isArray(record.output) ? record.output : [];
-
-  for (const item of output) {
-    if (!item || typeof item !== "object") {
+    if (!content) {
       continue;
     }
 
-    const content = Array.isArray((item as Record<string, unknown>).content)
-      ? ((item as Record<string, unknown>).content as Array<Record<string, unknown>>)
-      : [];
+    const parts = Array.isArray(content.parts) ? (content.parts as Array<Record<string, unknown>>) : [];
 
-    for (const block of content) {
-      if (typeof block.text === "string") {
-        return block.text;
+    for (const part of parts) {
+      if (typeof part.text === "string" && part.text.trim()) {
+        return part.text;
       }
     }
   }
@@ -106,51 +102,73 @@ function extractOutputText(payload: unknown) {
   return "";
 }
 
-async function generateWithOpenAI(signal: ImportedSignal): Promise<GeneratedEditorialArticle | null> {
-  if (!env.OPENAI_API_KEY) {
+function isGeneratedArticle(value: unknown): value is GeneratedEditorialArticle {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return (
+    typeof record.title === "string" &&
+    typeof record.subtitle === "string" &&
+    typeof record.excerpt === "string" &&
+    typeof record.tag === "string" &&
+    Array.isArray(record.body) &&
+    record.body.every((paragraph) => typeof paragraph === "string")
+  );
+}
+
+async function generateWithGemini(signal: ImportedSignal): Promise<GeneratedEditorialArticle | null> {
+  if (!env.GEMINI_API_KEY) {
     return null;
   }
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: env.OPENAI_MODEL,
-      input: [
-        {
-          role: "system",
-          content: [{ type: "input_text", text: buildEditorialSystemPrompt() }]
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: buildEditorialSystemPrompt() }]
         },
-        {
-          role: "user",
-          content: [{ type: "input_text", text: buildEditorialUserPrompt(signal) }]
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: buildEditorialUserPrompt(signal) }]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.9,
+          responseMimeType: "application/json",
+          responseSchema
         }
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          ...outputSchema
-        }
-      }
-    })
-  });
+      })
+    }
+  );
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`OpenAI editorial generation failed: ${response.status} ${errorText}`);
+    throw new Error(`Gemini editorial generation failed: ${response.status} ${errorText}`);
   }
 
   const payload = (await response.json()) as unknown;
-  const outputText = extractOutputText(payload);
+  const outputText = extractGeminiText(payload);
 
   if (!outputText) {
     return null;
   }
 
-  const parsed = JSON.parse(outputText) as GeneratedEditorialArticle;
+  const parsed = JSON.parse(outputText) as unknown;
+
+  if (!isGeneratedArticle(parsed)) {
+    return null;
+  }
 
   return {
     title: cleanModelText(parsed.title),
@@ -163,10 +181,10 @@ async function generateWithOpenAI(signal: ImportedSignal): Promise<GeneratedEdit
 
 export async function generateEditorialArticle(signal: ImportedSignal) {
   try {
-    const generated = await generateWithOpenAI(signal);
+    const generated = await generateWithGemini(signal);
     return generated ?? buildFallback(signal);
   } catch (error) {
-    console.error("Editorial LLM generation failed, using fallback.", error);
+    console.error("Editorial Gemini generation failed, using fallback.", error);
     return buildFallback(signal);
   }
 }

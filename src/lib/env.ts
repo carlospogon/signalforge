@@ -20,6 +20,6 @@ export const env = {
   ADMIN_EMAIL: process.env.ADMIN_EMAIL ?? "",
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD ?? "",
   ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET ?? "",
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "",
-  OPENAI_MODEL: process.env.OPENAI_MODEL ?? "gpt-5.2"
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? "",
+  GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-2.5-flash"
 };
