@@ -12,7 +12,7 @@ import { generateDraftArticle } from "@/lib/editorial/drafts";
 import { fetchSourceSignals } from "@/lib/editorial/feed";
 import { classifySignal } from "@/lib/editorial/classify";
 import { restoreSpanishText } from "@/lib/spanish";
-import { DraftArticle, EditorialSource, ImportedSignal, SourceSignal } from "@/types/editorial";
+import { DraftArticle, EditorialCategory, EditorialSource, ImportedSignal, SourceSignal } from "@/types/editorial";
 import { Article } from "@/types/article";
 
 function normalizeText(value: string) {
@@ -209,6 +209,106 @@ function slugifyDraftTitle(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function isDirectImageUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return /\.(avif|gif|jpe?g|png|svg|webp)(\?.*)?$/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function resolvePexelsImageUrl(value: string) {
+  try {
+    const url = new URL(value);
+
+    if (!url.hostname.includes("pexels.com")) {
+      return null;
+    }
+
+    const match = url.pathname.match(/-(\d+)\/?$/) ?? url.pathname.match(/\/photo\/(?:.+-)?(\d+)\/?$/);
+    const id = match?.[1];
+
+    if (!id) {
+      return null;
+    }
+
+    return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg`;
+  } catch {
+    return null;
+  }
+}
+
+function extractMetaImage(html: string) {
+  const patterns = [
+    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+    /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
+async function resolveImageUrl(value?: string) {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (isDirectImageUrl(trimmed)) {
+    return trimmed;
+  }
+
+  const pexelsImageUrl = resolvePexelsImageUrl(trimmed);
+
+  if (pexelsImageUrl) {
+    return pexelsImageUrl;
+  }
+
+  try {
+    const response = await fetch(trimmed, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 SynaptikEditorial/1.0"
+      },
+      signal: AbortSignal.timeout(5000)
+    });
+
+    if (!response.ok) {
+      return trimmed;
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (contentType.startsWith("image/")) {
+      return trimmed;
+    }
+
+    if (!contentType.includes("text/html")) {
+      return trimmed;
+    }
+
+    const html = await response.text();
+    const candidate = extractMetaImage(html);
+
+    if (!candidate) {
+      return trimmed;
+    }
+
+    return new URL(candidate, trimmed).toString();
+  } catch {
+    return trimmed;
+  }
 }
 
 function mapPublishedArticleRow(
@@ -621,6 +721,10 @@ type ManualDraftUpdateInput = {
   subtitulo: string;
   entradilla: string;
   cuerpo: string[];
+  categoria: EditorialCategory;
+  etiquetas: string[];
+  autor: string;
+  tiempoLectura: string;
   imagenUrl?: string;
   imagenAlt?: string;
 };
@@ -638,10 +742,11 @@ export async function updateDraftArticleManually(
 
   const wasPublished = draftRow.estado === "published" && Boolean(draftRow.publishedArticleId);
   const nextSlug = slugifyDraftTitle(input.titulo) || draftRow.slug;
+  const resolvedImageUrl = await resolveImageUrl(input.imagenUrl);
   const currentFuente = draftRow.fuente as DraftArticle["fuente"];
   const nextFuente = {
     ...currentFuente,
-    imagenUrl: input.imagenUrl || undefined,
+    imagenUrl: resolvedImageUrl,
     imagenAlt: input.imagenAlt || undefined
   };
   const currentSeo = draftRow.seo as DraftArticle["seo"];
@@ -663,6 +768,10 @@ export async function updateDraftArticleManually(
       subtitulo: input.subtitulo,
       entradilla: input.entradilla,
       cuerpo: input.cuerpo,
+      categoria: input.categoria,
+      etiquetas: input.etiquetas,
+      autor: input.autor,
+      tiempoLectura: input.tiempoLectura,
       fuente: nextFuente,
       seo: nextSeo,
       estado: nextState,
@@ -679,6 +788,17 @@ export async function updateDraftArticleManually(
         excerpt: input.entradilla,
         deck: input.subtitulo,
         cuerpo: input.cuerpo,
+        categoria: input.categoria,
+        autor: input.autor,
+        tiempoLectura: input.tiempoLectura,
+        accent: categoryAccents[input.categoria],
+        tag: mapDraftToTag({
+          ...mapDraftRow(draftRow),
+          categoria: input.categoria,
+          etiquetas: input.etiquetas,
+          autor: input.autor,
+          tiempoLectura: input.tiempoLectura
+        }),
         visualUrl: nextFuente.imagenUrl ?? null,
         visualAlt: nextFuente.imagenAlt ?? input.titulo,
         updatedAt: new Date()
@@ -694,7 +814,7 @@ export async function updateDraftArticleManually(
   );
 
   return {
-    categoria: draftRow.categoria,
+    categoria: input.categoria,
     slug: nextSlug,
     previousSlug: draftRow.slug,
     estado: nextState

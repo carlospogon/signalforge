@@ -23,33 +23,38 @@ export function EditDraftForm({ draft }: EditDraftFormProps) {
   const [subtitulo, setSubtitulo] = useState(draft.subtitulo);
   const [entradilla, setEntradilla] = useState(draft.entradilla);
   const [cuerpo, setCuerpo] = useState(draft.cuerpo.join("\n\n"));
+  const [categoria, setCategoria] = useState(draft.categoria);
+  const [etiquetas, setEtiquetas] = useState(draft.etiquetas.join(", "));
+  const [autor, setAutor] = useState(draft.autor);
+  const [tiempoLectura, setTiempoLectura] = useState(draft.tiempoLectura);
   const [imagenUrl, setImagenUrl] = useState(draft.fuente.imagenUrl ?? "");
   const [imagenAlt, setImagenAlt] = useState(draft.fuente.imagenAlt ?? "");
-  const categoryLabel = categories.find((category) => category.slug === draft.categoria)?.label ?? draft.categoria;
+  const categoryLabel = categories.find((category) => category.slug === categoria)?.label ?? categoria;
+  const previewUsesPageUrl = Boolean(imagenUrl.trim()) && !/^https?:\/\/.+\.(avif|gif|jpe?g|png|svg|webp)(\?.*)?$/i.test(imagenUrl.trim());
   const previewArticle: Article = {
     id: draft.slug,
     title: titulo.trim() || draft.titulo,
     excerpt: entradilla.trim() || draft.entradilla,
-    category: draft.categoria,
-    author: draft.autor,
-    readingTime: draft.tiempoLectura,
+    category: categoria,
+    author: autor.trim() || draft.autor,
+    readingTime: tiempoLectura.trim() || draft.tiempoLectura,
     publishedAt: draft.fechaPublicacionOriginal.slice(0, 10),
     accent:
-      draft.categoria === "ia"
+      categoria === "ia"
         ? "from-[#0b2f35] via-[#0f5e63] to-[#9be3ef]"
-        : draft.categoria === "ciencia"
+        : categoria === "ciencia"
           ? "from-[#1a224d] via-[#3148b7] to-[#8cc0ff]"
-          : draft.categoria === "tecnologia"
+          : categoria === "tecnologia"
             ? "from-[#10211b] via-[#236b4c] to-[#89f0ad]"
-            : draft.categoria === "espacio"
+            : categoria === "espacio"
               ? "from-[#120d27] via-[#342a79] to-[#9bb8ff]"
-              : draft.categoria === "salud"
+              : categoria === "salud"
                 ? "from-[#29151a] via-[#7e3245] to-[#ffb4c0]"
-                : draft.categoria === "biotech"
+                : categoria === "biotech"
                   ? "from-[#182328] via-[#2d6c78] to-[#98ecea]"
-                  : draft.categoria === "ciberseguridad"
+                  : categoria === "ciberseguridad"
                     ? "from-[#1f1510] via-[#7a4b1f] to-[#ffb77a]"
-                    : draft.categoria === "laboratorio"
+                    : categoria === "laboratorio"
                       ? "from-[#111f29] via-[#2a6b7d] to-[#90e8ff]"
                       : "from-[#1f1a0c] via-[#6f5b19] to-[#ffe17a]",
     tag: draft.tipo === "analysis" ? "Análisis" : draft.tipo === "opinion" ? "Opinión" : "Radar",
@@ -58,7 +63,7 @@ export function EditDraftForm({ draft }: EditDraftFormProps) {
       .split(/\r?\n\r?\n+/)
       .map((paragraph) => paragraph.trim())
       .filter(Boolean),
-    visual: imagenUrl.trim()
+    visual: imagenUrl.trim() && !previewUsesPageUrl
       ? {
           mode: "asset",
           src: imagenUrl.trim(),
@@ -130,6 +135,67 @@ export function EditDraftForm({ draft }: EditDraftFormProps) {
           </div>
 
           <div className="space-y-2">
+            <label htmlFor="categoria" className="text-[11px] uppercase tracking-[0.08em] text-[#8e99a3]">
+              Categoria
+            </label>
+            <select
+              id="categoria"
+              name="categoria"
+              value={categoria}
+              onChange={(event) => setCategoria(event.target.value as DraftArticle["categoria"])}
+              className="w-full border border-[#22303b] bg-[#0b131c] px-4 py-3 text-[14px] text-white outline-none transition focus:border-[#b5ff2a]"
+            >
+              {categories
+                .filter((category) => category.slug !== "energia")
+                .map((category) => (
+                  <option key={category.slug} value={category.slug}>
+                    {category.label}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="tiempoLectura" className="text-[11px] uppercase tracking-[0.08em] text-[#8e99a3]">
+              Tiempo de lectura
+            </label>
+            <input
+              id="tiempoLectura"
+              name="tiempoLectura"
+              value={tiempoLectura}
+              onChange={(event) => setTiempoLectura(event.target.value)}
+              className="w-full border border-[#22303b] bg-[#0b131c] px-4 py-3 text-[14px] text-white outline-none transition focus:border-[#b5ff2a]"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="autor" className="text-[11px] uppercase tracking-[0.08em] text-[#8e99a3]">
+              Autor
+            </label>
+            <input
+              id="autor"
+              name="autor"
+              value={autor}
+              onChange={(event) => setAutor(event.target.value)}
+              className="w-full border border-[#22303b] bg-[#0b131c] px-4 py-3 text-[14px] text-white outline-none transition focus:border-[#b5ff2a]"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="etiquetas" className="text-[11px] uppercase tracking-[0.08em] text-[#8e99a3]">
+              Etiquetas
+            </label>
+            <input
+              id="etiquetas"
+              name="etiquetas"
+              value={etiquetas}
+              onChange={(event) => setEtiquetas(event.target.value)}
+              className="w-full border border-[#22303b] bg-[#0b131c] px-4 py-3 text-[14px] text-white outline-none transition focus:border-[#b5ff2a]"
+            />
+            <p className="text-[12px] text-[#7f8d98]">Separalas con comas.</p>
+          </div>
+
+          <div className="space-y-2">
             <label htmlFor="imagenUrl" className="text-[11px] uppercase tracking-[0.08em] text-[#8e99a3]">
               Imagen URL
             </label>
@@ -140,6 +206,9 @@ export function EditDraftForm({ draft }: EditDraftFormProps) {
               onChange={(event) => setImagenUrl(event.target.value)}
               className="w-full border border-[#22303b] bg-[#0b131c] px-4 py-3 text-[14px] text-white outline-none transition focus:border-[#b5ff2a]"
             />
+            <p className="text-[12px] text-[#7f8d98]">
+              Acepta URL directa de imagen. Si pegas una pagina como Pexels, intentaremos resolver su imagen social al guardar.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -158,6 +227,12 @@ export function EditDraftForm({ draft }: EditDraftFormProps) {
 
         {state.error ? (
           <p className="border border-[#402126] bg-[#221015] px-4 py-3 text-[13px] text-[#ffb8b8]">{state.error}</p>
+        ) : null}
+
+        {previewUsesPageUrl ? (
+          <p className="border border-[#3b3319] bg-[#221d10] px-4 py-3 text-[13px] text-[#f2db84]">
+            La URL actual parece ser una pagina web y no una imagen directa. La previsualizacion local puede no mostrarla, pero al guardar intentaremos extraer su imagen principal automaticamente.
+          </p>
         ) : null}
 
         <div className="flex flex-wrap gap-3">
