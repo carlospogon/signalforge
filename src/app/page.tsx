@@ -15,10 +15,10 @@ const topLinks = [
 ];
 
 const metrics = [
-  { value: "Desde 2012", detail: "Mas de una decada informando cada dia", href: "/quienes-somos" },
-  { value: "+12.500", detail: "Articulos publicados sobre tecnologia y ciencia", href: "/archivo" },
+  { value: "Desde 2012", detail: "Más de una década informando cada día", href: "/quienes-somos" },
+  { value: "+12.500", detail: "Artículos publicados sobre tecnología y ciencia", href: "/archivo" },
   { value: "+2,5 millones", detail: "De lectores mensuales en todo el mundo", href: "/newsletter" },
-  { value: "150+ paises", detail: "Una comunidad global apasionada por la innovacion", href: "/archivo" },
+  { value: "150+ países", detail: "Una comunidad global apasionada por la innovación", href: "/archivo" },
   { value: "Premios", detail: "Reconocidos por nuestra calidad editorial", href: "/quienes-somos" }
 ];
 
@@ -94,7 +94,10 @@ function pickAnalysisCards(articles: Article[], limit: number, excludedIds: stri
     return picked;
   }
 
-  return [...picked, ...pickUniqueArticles(articles, limit - picked.length, [...excludedIds, ...picked.map((article) => article.id)])];
+  return [
+    ...picked,
+    ...pickUniqueArticles(articles, limit - picked.length, [...excludedIds, ...picked.map((article) => article.id)])
+  ];
 }
 
 export default async function Home() {
@@ -111,9 +114,12 @@ export default async function Home() {
   const analysisCards = pickAnalysisCards(
     allArticles,
     4,
-    [hero?.id, nowStory?.id, ...sideArticles.map((article) => article.id), ...recentArticles.map((article) => article.id)].filter(
-      Boolean
-    ) as string[]
+    [
+      hero?.id,
+      nowStory?.id,
+      ...sideArticles.map((article) => article.id),
+      ...recentArticles.map((article) => article.id)
+    ].filter(Boolean) as string[]
   );
   const [radarSignals, editorialSummary] = await Promise.all([getRadarSignals(3), getEditorialSummary()]);
 
@@ -125,7 +131,7 @@ export default async function Home() {
     <div className="min-h-screen bg-[#05090f] text-white">
       <div className="mx-auto max-w-[1054px] bg-[#071018] shadow-[0_0_0_1px_rgba(255,255,255,0.02)] sm:border-x sm:border-[#202830]">
         <div className="hidden min-h-6 items-center justify-between border-b border-[#1b242d] px-8 text-[10px] text-[#b8c0c7] md:flex">
-          <p>Desde 2012 informando sobre ciencia, tecnologia e innovacion</p>
+          <p>Desde 2012 informando sobre ciencia, tecnología e innovación</p>
           <div className="flex items-center gap-5">
             {topLinks.map((item) => (
               <Link key={item.label} href={item.href} className="uppercase tracking-[0.12em] text-[#d5dbe0]">
@@ -201,11 +207,7 @@ export default async function Home() {
                   href={`/articulo/${article.id}`}
                   className="flex gap-3 border-b border-[#1b242d] pb-3 transition hover:bg-white/[0.02] last:border-b-0"
                 >
-                  <ArticleVisual
-                    article={article}
-                    className="aspect-[6/5] w-[92px] shrink-0"
-                    sizes="92px"
-                  />
+                  <ArticleVisual article={article} className="aspect-[6/5] w-[92px] shrink-0" sizes="92px" />
                   <div className="space-y-1.5">
                     <p className="text-[9px] uppercase tracking-[0.1em] text-[#b5ff2a]">
                       {categoryLabelMap.get(article.category) ?? article.category}
@@ -220,10 +222,10 @@ export default async function Home() {
             <aside className="bg-[#0b131c] px-5 py-6 sm:px-7">
               <div className="flex items-center justify-between">
                 <h3 className="text-[20px] font-semibold uppercase tracking-[0.04em] text-[#eef3f7] sm:text-[24px]">
-                  Ultimas publicadas
+                  Últimas publicadas
                 </h3>
                 <Link href="/archivo" className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">
-                  Ver mas
+                  Ver más
                 </Link>
               </div>
               <div className="mt-4 h-px w-8 bg-[#b5ff2a]" />
@@ -272,14 +274,14 @@ export default async function Home() {
             <div className="flex flex-col gap-4 border-b border-[#1b242d] pb-5 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b5ff2a]">
-                  Automatizacion editorial
+                  Automatización editorial
                 </p>
                 <h3 className="text-[24px] font-semibold uppercase tracking-[0.04em] text-[#f3f6f8] sm:text-[30px]">
-                  No perseguimos titulares. Interpretamos senales.
+                  No perseguimos titulares. Interpretamos señales.
                 </h3>
                 <p className="max-w-3xl text-[13px] leading-6 text-[#b8c1c9]">
                   Synaptik ya prepara una capa de ingesta modular para detectar fuentes fiables,
-                  clasificar riesgo editorial y convertir senales en borradores revisables antes de
+                  clasificar riesgo editorial y convertir señales en borradores revisables antes de
                   publicar.
                 </p>
               </div>
@@ -289,11 +291,11 @@ export default async function Home() {
                   <p className="mt-2 text-[20px] font-semibold text-white">{editorialSummary.sourceCount}</p>
                 </div>
                 <div className="bg-[#0b131c] px-4 py-3">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#7f8d98]">Senales</p>
+                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#7f8d98]">Señales</p>
                   <p className="mt-2 text-[20px] font-semibold text-white">{editorialSummary.signalCount}</p>
                 </div>
                 <div className="bg-[#0b131c] px-4 py-3">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#7f8d98]">Revision</p>
+                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#7f8d98]">Revisión</p>
                   <p className="mt-2 text-[20px] font-semibold text-white">{editorialSummary.reviewCount}</p>
                 </div>
               </div>
@@ -303,9 +305,7 @@ export default async function Home() {
               <div>
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-[#7d8b96]">
-                      Radar Synaptik
-                    </p>
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-[#7d8b96]">Radar Synaptik</p>
                     <h4 className="mt-2 text-[22px] font-semibold text-[#eef3f7]">Últimas señales detectadas</h4>
                   </div>
                   <span className="text-[10px] uppercase tracking-[0.08em] text-[#88959f]">
@@ -320,25 +320,25 @@ export default async function Home() {
                   Mesa editorial
                 </p>
                 <h4 className="mt-3 text-[22px] font-semibold text-[#eef3f7]">
-                  Analisis riguroso, contexto claro y lectura accesible
+                  Análisis riguroso, contexto claro y lectura accesible
                 </h4>
                 <p className="mt-4 text-[13px] leading-6 text-[#b8c1c9]">
-                  En Synaptik revisamos cada senal con criterio editorial, contrastamos fuentes y
-                  ordenamos el contexto antes de publicar. La ambicion no es complicar la
-                  informacion, sino hacerla precisa, didactica y util para cualquier lector, tenga
-                  o no una base tecnica previa.
+                  En Synaptik revisamos cada señal con criterio editorial, contrastamos fuentes y
+                  ordenamos el contexto antes de publicar. La ambición no es complicar la
+                  información, sino hacerla precisa, didáctica y útil para cualquier lector, tenga
+                  o no una base técnica previa.
                 </p>
                 <div className="mt-6 space-y-3 border-t border-[#1b242d] pt-5">
                   <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.08em] text-[#d7dde2]">
-                      <span>Radar Synaptik</span>
-                      <span className="text-[#8b98a3]">Señales clave del momento</span>
+                    <span>Radar Synaptik</span>
+                    <span className="text-[#8b98a3]">Señales clave del momento</span>
                   </div>
                   <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.08em] text-[#d7dde2]">
-                    <span>Analisis Synaptik</span>
+                    <span>Análisis Synaptik</span>
                     <span className="text-[#8b98a3]">Contexto, contraste y criterio</span>
                   </div>
                   <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.08em] text-[#d7dde2]">
-                    <span>Opinion</span>
+                    <span>Opinión</span>
                     <span className="text-[#8b98a3]">Firma y mirada editorial propia</span>
                   </div>
                 </div>
@@ -352,11 +352,11 @@ export default async function Home() {
                 <div className="flex items-center gap-3">
                   <div className="h-5 w-[2px] bg-[#b5ff2a]" />
                   <h3 className="text-[22px] font-semibold uppercase tracking-[0.04em] text-[#f5f7f9] sm:text-[28px]">
-                    Analisis y opinion
+                    Análisis y opinión
                   </h3>
                 </div>
                 <Link href="/categoria/opinion" className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">
-                  Abrir seccion
+                  Abrir sección
                 </Link>
               </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -390,7 +390,7 @@ export default async function Home() {
                 Newsletter
               </h3>
               <p className="mt-4 text-[13px] leading-6 text-[#b8c1c9]">
-                El boletin editorial abrira con la primera version publica. Hasta entonces puedes
+                El boletín editorial abrirá con la primera versión pública. Hasta entonces puedes
                 revisar el archivo o solicitar acceso anticipado.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
@@ -398,7 +398,7 @@ export default async function Home() {
                   href="/newsletter"
                   className="bg-[#b5ff2a] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.06em] text-[#11170f]"
                 >
-                  Ver estado del boletin
+                  Ver estado del boletín
                 </Link>
                 <Link
                   href="/contacto"
@@ -409,7 +409,7 @@ export default async function Home() {
               </div>
               <div className="mt-6 space-y-3 border-t border-[#1b242d] pt-5">
                 <Link href="/categoria/energia" className="block text-[12px] uppercase tracking-[0.08em] text-[#dce3e8]">
-                  Especial energia e IA
+                  Especial energía e IA
                 </Link>
                 <Link href="/categoria/salud" className="block text-[12px] uppercase tracking-[0.08em] text-[#dce3e8]">
                   Especial salud y biotech

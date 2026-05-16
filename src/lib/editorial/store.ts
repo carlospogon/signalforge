@@ -165,6 +165,16 @@ function mapSignalRow(row: typeof importedSignals.$inferSelect, source: Editoria
   };
 }
 
+function withDraftMedia(signal: ImportedSignal, draftRow: typeof draftArticles.$inferSelect): ImportedSignal {
+  const draftFuente = draftRow.fuente as DraftArticle["fuente"];
+
+  return {
+    ...signal,
+    imagenUrl: draftFuente.imagenUrl,
+    imagenAlt: draftFuente.imagenAlt
+  };
+}
+
 function mapDraftRow(row: typeof draftArticles.$inferSelect): DraftArticle {
   return {
     id: row.id,
@@ -190,6 +200,15 @@ function mapDraftRow(row: typeof draftArticles.$inferSelect): DraftArticle {
     accionSugerida: row.accionSugerida,
     originalSignalId: row.signalId
   };
+}
+
+function slugifyDraftTitle(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function mapPublishedArticleRow(
@@ -470,6 +489,11 @@ export async function listDraftArticles(limit = 50) {
   return rows.map(mapDraftRow);
 }
 
+export async function getDraftArticleById(draftId: string) {
+  const [row] = await db.select().from(draftArticles).where(eq(draftArticles.id, draftId)).limit(1);
+  return row ? mapDraftRow(row) : null;
+}
+
 export async function listPublishedArticles() {
   const rows = await db
     .select({
@@ -532,6 +556,127 @@ export async function updateDraftState(draftId: string, estado: DraftArticle["es
   return {
     categoria: draft.categoria,
     slug: draft.slug
+  };
+}
+
+export async function regenerateDraftArticleFromSignal(draftId: string, reviewerName: string) {
+  const [draftRow] = await db.select().from(draftArticles).where(eq(draftArticles.id, draftId)).limit(1);
+
+  if (!draftRow) {
+    throw new Error("Draft not found.");
+  }
+
+  if (draftRow.estado === "published") {
+    throw new Error("Published drafts cannot be regenerated from the queue.");
+  }
+
+  const [sourceRow] = await db.select().from(sources).where(eq(sources.id, draftRow.sourceId)).limit(1);
+  const [signalRow] = await db.select().from(importedSignals).where(eq(importedSignals.id, draftRow.signalId)).limit(1);
+
+  if (!sourceRow || !signalRow) {
+    throw new Error("Source signal not found.");
+  }
+
+  const source = mapSourceRow(sourceRow);
+  const signal = withDraftMedia(mapSignalRow(signalRow, source), draftRow);
+  const regenerated = await generateDraftArticle(signal);
+
+  await db
+    .update(draftArticles)
+    .set({
+      titulo: regenerated.titulo,
+      slug: regenerated.slug,
+      subtitulo: regenerated.subtitulo,
+      entradilla: regenerated.entradilla,
+      cuerpo: regenerated.cuerpo,
+      categoria: regenerated.categoria,
+      etiquetas: regenerated.etiquetas,
+      fuentesConsultadas: regenerated.fuentesConsultadas,
+      estado: "needs_review",
+      autor: regenerated.autor,
+      tipo: regenerated.tipo,
+      fechaCreacion: new Date(regenerated.fechaCreacion),
+      fechaPublicacionOriginal: new Date(regenerated.fechaPublicacionOriginal),
+      fechaCaptura: new Date(regenerated.fechaCaptura),
+      tiempoLectura: regenerated.tiempoLectura,
+      seo: regenerated.seo,
+      fuente: regenerated.fuente,
+      riesgoEditorial: regenerated.riesgoEditorial,
+      prioridadPublicacion: regenerated.prioridadPublicacion,
+      accionSugerida: regenerated.accionSugerida,
+      updatedAt: new Date()
+    })
+    .where(eq(draftArticles.id, draftId));
+
+  await recordPublicationReview(draftId, reviewerName, "needs_review", "Draft regenerated from original signal.");
+
+  return {
+    categoria: regenerated.categoria,
+    slug: regenerated.slug
+  };
+}
+
+type ManualDraftUpdateInput = {
+  titulo: string;
+  subtitulo: string;
+  entradilla: string;
+  cuerpo: string[];
+  imagenUrl?: string;
+  imagenAlt?: string;
+};
+
+export async function updateDraftArticleManually(
+  draftId: string,
+  input: ManualDraftUpdateInput,
+  reviewerName: string
+) {
+  const [draftRow] = await db.select().from(draftArticles).where(eq(draftArticles.id, draftId)).limit(1);
+
+  if (!draftRow) {
+    throw new Error("Draft not found.");
+  }
+
+  if (draftRow.estado === "published") {
+    throw new Error("Published drafts cannot be edited from this screen.");
+  }
+
+  const nextSlug = slugifyDraftTitle(input.titulo) || draftRow.slug;
+  const currentFuente = draftRow.fuente as DraftArticle["fuente"];
+  const nextFuente = {
+    ...currentFuente,
+    imagenUrl: input.imagenUrl || undefined,
+    imagenAlt: input.imagenAlt || undefined
+  };
+  const currentSeo = draftRow.seo as DraftArticle["seo"];
+  const nextSeo = {
+    ...currentSeo,
+    canonicalPath: `/articulo/${nextSlug}`,
+    openGraphTitle: input.titulo,
+    openGraphDescription: input.subtitulo,
+    twitterTitle: input.titulo,
+    twitterDescription: input.subtitulo
+  };
+
+  await db
+    .update(draftArticles)
+    .set({
+      titulo: input.titulo,
+      slug: nextSlug,
+      subtitulo: input.subtitulo,
+      entradilla: input.entradilla,
+      cuerpo: input.cuerpo,
+      fuente: nextFuente,
+      seo: nextSeo,
+      estado: "needs_review",
+      updatedAt: new Date()
+    })
+    .where(eq(draftArticles.id, draftId));
+
+  await recordPublicationReview(draftId, reviewerName, "needs_review", "Draft manually edited from admin.");
+
+  return {
+    categoria: draftRow.categoria,
+    slug: nextSlug
   };
 }
 

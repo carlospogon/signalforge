@@ -125,12 +125,11 @@ async function generateWithGemini(signal: ImportedSignal): Promise<GeneratedEdit
   }
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`,
     {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": env.GEMINI_API_KEY
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         systemInstruction: {

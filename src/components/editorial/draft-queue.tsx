@@ -111,6 +111,22 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
               </p>
 
               <div className="flex flex-wrap gap-2">
+                {draft.estado !== "published" ? (
+                  <Link
+                    href={`/admin/drafts/${draft.id}/edit`}
+                    className={actionButtonClassName}
+                  >
+                    Editar
+                  </Link>
+                ) : null}
+                {draft.estado !== "published" ? (
+                  <DraftActionForm
+                    draftId={draft.id}
+                    intent="regenerate"
+                    label="Regenerar"
+                    className={actionButtonClassName}
+                  />
+                ) : null}
                 <DraftActionForm
                   draftId={draft.id}
                   intent="needs_review"
@@ -177,6 +193,22 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
                       className="h-10 w-14 rounded border border-[#1b242d] object-cover"
                     />
                   </>
+                ) : null}
+                {draft.estado !== "published" ? (
+                  <Link
+                    href={`/admin/drafts/${draft.id}/edit`}
+                    className={actionButtonClassName}
+                  >
+                    Editar
+                  </Link>
+                ) : null}
+                {draft.estado !== "published" ? (
+                  <DraftActionForm
+                    draftId={draft.id}
+                    intent="regenerate"
+                    label="Regenerar"
+                    className={actionButtonClassName}
+                  />
                 ) : null}
                 <DraftActionForm
                   draftId={draft.id}

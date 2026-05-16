@@ -6,7 +6,7 @@ import { submitDraftAction, type DraftActionState } from "@/app/admin/drafts/act
 
 type DraftActionFormProps = {
   draftId: string;
-  intent: "needs_review" | "approved" | "rejected" | "publish";
+  intent: "needs_review" | "approved" | "rejected" | "publish" | "regenerate";
   label: string;
   className: string;
 };

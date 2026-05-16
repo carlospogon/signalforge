@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminSession } from "@/lib/auth/server";
-import { publishDraftArticle, updateDraftState } from "@/lib/editorial/store";
+import { publishDraftArticle, regenerateDraftArticleFromSignal, updateDraftState } from "@/lib/editorial/store";
 import { DraftArticle } from "@/types/editorial";
 
 export type DraftActionState = {
@@ -52,6 +52,22 @@ export async function submitDraftAction(
     } catch {
       return {
         error: "No se ha podido publicar el borrador."
+      };
+    }
+  }
+
+  if (intent === "regenerate") {
+    try {
+      const result = await regenerateDraftArticleFromSignal(draftId, session.email);
+      revalidateEditorialPaths(result.categoria, result.slug);
+
+      return {
+        success: true,
+        nextState: "needs_review"
+      };
+    } catch {
+      return {
+        error: "No se ha podido regenerar el borrador."
       };
     }
   }
