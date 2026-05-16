@@ -15,6 +15,7 @@ const initialState = {
 
 export function EditDraftForm({ draft }: EditDraftFormProps) {
   const [state, formAction, pending] = useActionState(saveDraftEditAction, initialState);
+  const isPublished = draft.estado === "published";
 
   return (
     <form action={formAction} className="space-y-6">
@@ -108,7 +109,7 @@ export function EditDraftForm({ draft }: EditDraftFormProps) {
           disabled={pending}
           className="bg-[#b5ff2a] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#11170f] transition hover:bg-[#c6ff57] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {pending ? "Guardando..." : "Guardar borrador"}
+          {pending ? "Guardando..." : isPublished ? "Guardar y actualizar publicacion" : "Guardar borrador"}
         </button>
         <Link
           href="/admin/drafts"

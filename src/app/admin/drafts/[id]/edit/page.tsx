@@ -13,7 +13,7 @@ type EditDraftPageProps = {
 
 export const metadata: Metadata = {
   title: "Editar borrador",
-  description: "Edicion manual de borradores editoriales desde el panel interno.",
+  description: "Edicion manual de borradores y piezas publicadas desde el panel interno.",
   robots: {
     index: false,
     follow: false
@@ -25,9 +25,11 @@ export default async function EditDraftPage({ params }: EditDraftPageProps) {
   const { id } = await params;
   const draft = await getDraftArticleById(id);
 
-  if (!draft || draft.estado === "published") {
+  if (!draft) {
     notFound();
   }
+
+  const isPublished = draft.estado === "published";
 
   return (
     <div className="min-h-screen bg-[#05090f] text-white">
@@ -47,8 +49,9 @@ export default async function EditDraftPage({ params }: EditDraftPageProps) {
             <span>{draft.fuente.nombre}</span>
           </div>
           <p className="mt-5 max-w-3xl text-[14px] leading-7 text-[#b8c1c9]">
-            Ajusta el texto y la imagen del borrador. Al guardar volvera a revision dentro del panel
-            para que puedas aprobarlo o publicarlo despues.
+            {isPublished
+              ? "Ajusta el texto o la imagen y guarda para actualizar de inmediato la pieza publicada y su borrador vinculado."
+              : "Ajusta el texto y la imagen del borrador. Al guardar volvera a revision dentro del panel para que puedas aprobarlo o publicarlo despues."}
           </p>
         </section>
 

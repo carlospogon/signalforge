@@ -55,6 +55,7 @@ export async function saveDraftEditAction(_: EditDraftState, formData: FormData)
     revalidatePath("/rss.xml");
     revalidatePath("/sitemap.xml");
     revalidatePath(`/categoria/${result.categoria}`);
+    revalidatePath(`/articulo/${result.previousSlug}`);
     revalidatePath(`/articulo/${result.slug}`);
   } catch {
     return { error: "No se ha podido guardar la edicion del borrador." };

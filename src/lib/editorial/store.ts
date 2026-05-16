@@ -636,10 +636,7 @@ export async function updateDraftArticleManually(
     throw new Error("Draft not found.");
   }
 
-  if (draftRow.estado === "published") {
-    throw new Error("Published drafts cannot be edited from this screen.");
-  }
-
+  const wasPublished = draftRow.estado === "published" && Boolean(draftRow.publishedArticleId);
   const nextSlug = slugifyDraftTitle(input.titulo) || draftRow.slug;
   const currentFuente = draftRow.fuente as DraftArticle["fuente"];
   const nextFuente = {
@@ -656,6 +653,7 @@ export async function updateDraftArticleManually(
     twitterTitle: input.titulo,
     twitterDescription: input.subtitulo
   };
+  const nextState: DraftArticle["estado"] = wasPublished ? "published" : "needs_review";
 
   await db
     .update(draftArticles)
@@ -667,16 +665,39 @@ export async function updateDraftArticleManually(
       cuerpo: input.cuerpo,
       fuente: nextFuente,
       seo: nextSeo,
-      estado: "needs_review",
+      estado: nextState,
       updatedAt: new Date()
     })
     .where(eq(draftArticles.id, draftId));
 
-  await recordPublicationReview(draftId, reviewerName, "needs_review", "Draft manually edited from admin.");
+  if (draftRow.publishedArticleId) {
+    await db
+      .update(publishedArticles)
+      .set({
+        slug: nextSlug,
+        titulo: input.titulo,
+        excerpt: input.entradilla,
+        deck: input.subtitulo,
+        cuerpo: input.cuerpo,
+        visualUrl: nextFuente.imagenUrl ?? null,
+        visualAlt: nextFuente.imagenAlt ?? input.titulo,
+        updatedAt: new Date()
+      })
+      .where(eq(publishedArticles.id, draftRow.publishedArticleId));
+  }
+
+  await recordPublicationReview(
+    draftId,
+    reviewerName,
+    nextState,
+    wasPublished ? "Published draft manually updated from admin." : "Draft manually edited from admin."
+  );
 
   return {
     categoria: draftRow.categoria,
-    slug: nextSlug
+    slug: nextSlug,
+    previousSlug: draftRow.slug,
+    estado: nextState
   };
 }
 

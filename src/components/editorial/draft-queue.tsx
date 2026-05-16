@@ -111,14 +111,12 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
               </p>
 
               <div className="flex flex-wrap gap-2">
-                {draft.estado !== "published" ? (
-                  <Link
-                    href={`/admin/drafts/${draft.id}/edit`}
-                    className={actionButtonClassName}
-                  >
-                    Editar
-                  </Link>
-                ) : null}
+                <Link
+                  href={`/admin/drafts/${draft.id}/edit`}
+                  className={actionButtonClassName}
+                >
+                  Editar
+                </Link>
                 {draft.estado !== "published" ? (
                   <DraftActionForm
                     draftId={draft.id}
@@ -194,14 +192,12 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
                     />
                   </>
                 ) : null}
-                {draft.estado !== "published" ? (
-                  <Link
-                    href={`/admin/drafts/${draft.id}/edit`}
-                    className={actionButtonClassName}
-                  >
-                    Editar
-                  </Link>
-                ) : null}
+                <Link
+                  href={`/admin/drafts/${draft.id}/edit`}
+                  className={actionButtonClassName}
+                >
+                  Editar
+                </Link>
                 {draft.estado !== "published" ? (
                   <DraftActionForm
                     draftId={draft.id}
