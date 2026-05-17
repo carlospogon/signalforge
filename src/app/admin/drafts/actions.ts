@@ -11,6 +11,12 @@ export type DraftActionState = {
   nextState?: DraftArticle["estado"];
 };
 
+export type BulkDraftActionState = {
+  error?: string;
+  success?: boolean;
+  publishedCount?: number;
+};
+
 function revalidateEditorialPaths(category: DraftArticle["categoria"], slug?: string) {
   revalidatePath("/admin/drafts");
   revalidatePath("/");
@@ -89,6 +95,54 @@ export async function submitDraftAction(
   } catch {
     return {
       error: "No se ha podido actualizar el estado del borrador."
+    };
+  }
+}
+
+export async function submitBulkPublishAction(
+  _: BulkDraftActionState,
+  formData: FormData
+): Promise<BulkDraftActionState> {
+  const session = await requireAdminSession();
+  const draftIds = formData
+    .getAll("draftIds")
+    .map((value) => String(value))
+    .filter(Boolean);
+
+  if (draftIds.length === 0) {
+    return {
+      error: "Selecciona al menos un borrador para publicarlo."
+    };
+  }
+
+  let publishedCount = 0;
+  let lastCategory: DraftArticle["categoria"] | undefined;
+  let lastSlug: string | undefined;
+
+  try {
+    for (const draftId of draftIds) {
+      const result = await publishDraftArticle(draftId, session.email);
+      publishedCount += 1;
+      lastCategory = result.categoria;
+      lastSlug = result.slug;
+    }
+
+    if (lastCategory) {
+      revalidateEditorialPaths(lastCategory, lastSlug);
+    } else {
+      revalidatePath("/admin/drafts");
+    }
+
+    return {
+      success: true,
+      publishedCount
+    };
+  } catch {
+    return {
+      error:
+        publishedCount > 0
+          ? `Se publicaron ${publishedCount} borradores antes de que fallara la operación.`
+          : "No se han podido publicar los borradores seleccionados."
     };
   }
 }
