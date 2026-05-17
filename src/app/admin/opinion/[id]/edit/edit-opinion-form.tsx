@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { ArticleVisual } from "@/components/articles/article-visual";
+import { OpinionArticleLayout } from "@/components/opinion/opinion-article-layout";
 import { saveOpinionEditAction } from "@/app/admin/opinion/[id]/edit/actions";
 import { Article } from "@/types/article";
 import { DraftArticle } from "@/types/editorial";
@@ -214,45 +214,12 @@ export function EditOpinionForm({ draft }: EditOpinionFormProps) {
 
       <section className="border border-[#2f2612] bg-[#161518]">
         <div className="border-b border-[#2f2612] px-5 py-4">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#ffe17a]">Previsualización base</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#ffe17a]">Previsualización premium</p>
           <p className="mt-2 text-[13px] text-[#d3cab0]">
-            Vista de trabajo provisional. El layout premium de opinión irá en el siguiente bloque.
+            Vista de trabajo conectada al layout público exclusivo de opinión.
           </p>
         </div>
-
-        <article className="overflow-hidden">
-          <ArticleVisual
-            article={previewArticle}
-            className="aspect-[16/9] w-full"
-            sizes="(max-width: 1024px) 100vw, 960px"
-            priority={false}
-          />
-          <div className="space-y-6 p-5 sm:p-6">
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-[#b8aa78]">
-                <span className="border border-[#3a3222] bg-[#1b1911] px-3 py-1 text-[#ffe17a]">Opinión</span>
-                <span>{previewArticle.tag}</span>
-              </div>
-              <h2 className="font-display text-3xl font-semibold leading-tight text-white sm:text-4xl">
-                {previewArticle.title}
-              </h2>
-              <p className="text-lg leading-8 text-[#dfd8c3]">{previewArticle.deck ?? previewArticle.excerpt}</p>
-              <div className="flex flex-wrap gap-4 border-t border-white/10 pt-4 text-sm text-[#b8aa78]">
-                <span>{previewArticle.author}</span>
-                <span>{previewArticle.publishedAt}</span>
-                <span>{previewArticle.readingTime}</span>
-              </div>
-            </div>
-
-            <div className="space-y-5 text-[15px] leading-8 text-[#f2ede0]">
-              {previewArticle.body.length > 0 ? (
-                previewArticle.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)
-              ) : (
-                <p className="text-[#b8aa78]">Añade contenido en el cuerpo para ver la previsualización de la columna.</p>
-              )}
-            </div>
-          </div>
-        </article>
+        <OpinionArticleLayout article={previewArticle} preview />
       </section>
     </div>
   );
