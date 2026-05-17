@@ -66,6 +66,14 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
       </div>
 
       <div className="divide-y divide-[#1b242d]">
+        {drafts.length === 0 ? (
+          <div className="px-5 py-10 text-center">
+            <p className="text-[16px] text-[#d7dde2]">No hay articulos que coincidan con la busqueda actual.</p>
+            <p className="mt-2 text-[13px] text-[#7f8d98]">
+              Prueba con parte del titulo, la fuente, el slug, el autor o el estado del borrador.
+            </p>
+          </div>
+        ) : null}
         {drafts.map((draft) => (
           <article key={draft.id} className="px-5 py-5">
             <div className="hidden gap-4 xl:grid xl:grid-cols-[2fr_0.95fr_0.8fr_0.75fr_0.9fr_1.2fr]">

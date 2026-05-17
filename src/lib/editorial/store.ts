@@ -24,6 +24,14 @@ function normalizeText(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function normalizeSearchText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
 function createStableHash(input: string) {
   let hash = 0;
 
@@ -587,6 +595,52 @@ export async function listDraftArticles(limit = 50) {
     .limit(limit);
 
   return rows.map(mapDraftRow);
+}
+
+export async function searchDraftArticles(query: string) {
+  const activeRows = await getActiveSourceRows();
+  const activeIds = activeRows.map((row) => row.id);
+
+  if (activeIds.length === 0) {
+    return [];
+  }
+
+  const normalizedQuery = normalizeSearchText(query);
+  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+
+  if (!normalizedQuery) {
+    return listDraftArticles(100);
+  }
+
+  const rows = await db
+    .select()
+    .from(draftArticles)
+    .where(inArray(draftArticles.sourceId, activeIds))
+    .orderBy(desc(draftArticles.updatedAt), desc(draftArticles.fechaCreacion), desc(draftArticles.createdAt));
+
+  return rows
+    .map(mapDraftRow)
+    .filter((draft) => {
+      const haystack = normalizeSearchText(
+        [
+          draft.titulo,
+          draft.slug,
+          draft.subtitulo,
+          draft.entradilla,
+          draft.categoria,
+          draft.estado,
+          draft.autor,
+          draft.tipo,
+          draft.fuente.nombre,
+          draft.fuente.tituloOriginal ?? "",
+          draft.fuente.urlOriginal,
+          draft.fuente.resumenOriginal ?? "",
+          draft.etiquetas.join(" ")
+        ].join(" ")
+      );
+
+      return tokens.every((token) => haystack.includes(token));
+    });
 }
 
 export async function getDraftArticleById(draftId: string) {
