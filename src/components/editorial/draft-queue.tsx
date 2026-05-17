@@ -9,6 +9,9 @@ import { DraftArticle } from "@/types/editorial";
 
 type DraftQueueProps = {
   drafts: DraftArticle[];
+  title?: string;
+  eyebrow?: string;
+  showBulkPublish?: boolean;
 };
 
 const initialBulkState: BulkDraftActionState = {};
@@ -48,7 +51,12 @@ const stateLabel = {
 const actionButtonClassName =
   "border border-[#2a333d] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-white transition hover:border-[#b5ff2a] hover:text-[#b5ff2a]";
 
-export function DraftQueue({ drafts }: DraftQueueProps) {
+export function DraftQueue({
+  drafts,
+  title = "Cola editorial",
+  eyebrow = "Interno",
+  showBulkPublish = true
+}: DraftQueueProps) {
   const router = useRouter();
   const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
   const [bulkState, bulkFormAction, bulkPending] = useActionState(submitBulkPublishAction, initialBulkState);
@@ -62,6 +70,12 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
   );
   const allSelectableChecked =
     selectableDraftIds.length > 0 && selectableDraftIds.every((draftId) => effectiveSelectedDraftIds.includes(draftId));
+  const desktopGridClassName = showBulkPublish
+    ? "hidden grid-cols-[0.34fr_2fr_0.95fr_0.8fr_0.75fr_0.9fr_1.2fr] gap-4 border-b border-[#1b242d] px-5 py-3 text-[10px] uppercase tracking-[0.1em] text-[#72808b] xl:grid"
+    : "hidden grid-cols-[2fr_0.95fr_0.8fr_0.75fr_0.9fr_1.2fr] gap-4 border-b border-[#1b242d] px-5 py-3 text-[10px] uppercase tracking-[0.1em] text-[#72808b] xl:grid";
+  const desktopRowClassName = showBulkPublish
+    ? "hidden gap-4 xl:grid xl:grid-cols-[0.34fr_2fr_0.95fr_0.8fr_0.75fr_0.9fr_1.2fr]"
+    : "hidden gap-4 xl:grid xl:grid-cols-[2fr_0.95fr_0.8fr_0.75fr_0.9fr_1.2fr]";
 
   useEffect(() => {
     if (bulkState.success) {
@@ -87,9 +101,9 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
     <div className="overflow-hidden border border-[#1b242d] bg-[#08111a]">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1b242d] px-5 py-4">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#b5ff2a]">Interno</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#b5ff2a]">{eyebrow}</p>
           <h2 className="mt-2 text-[24px] font-semibold uppercase tracking-[0.04em] text-[#eff3f6]">
-            Cola editorial
+            {title}
           </h2>
         </div>
 
@@ -98,45 +112,47 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
             RSS propio
           </Link>
 
-          <form action={bulkFormAction} className="flex flex-wrap items-center justify-end gap-3">
-            {effectiveSelectedDraftIds.map((draftId) => (
-              <input key={draftId} type="hidden" name="draftIds" value={draftId} />
-            ))}
-            <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.08em] text-[#8f9ca7]">
-              <input
-                type="checkbox"
-                checked={allSelectableChecked}
-                onChange={(event) => toggleVisibleSelection(event.target.checked)}
-                disabled={selectableDraftIds.length === 0}
-                className="h-4 w-4 border border-[#32404b] bg-[#0b131c] accent-[#b5ff2a]"
-              />
-              Seleccionar visibles
-            </label>
-            <span className="text-[11px] text-[#8f9ca7]">
-              {effectiveSelectedDraftIds.length} seleccionado{effectiveSelectedDraftIds.length === 1 ? "" : "s"}
-            </span>
-            <button
-              type="submit"
-              disabled={bulkPending || effectiveSelectedDraftIds.length === 0}
-              className="bg-[#b5ff2a] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#10170d] transition hover:bg-[#c6ff58] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {bulkPending ? "Publicando..." : "Publicar seleccionados"}
-            </button>
-          </form>
+          {showBulkPublish ? (
+            <form action={bulkFormAction} className="flex flex-wrap items-center justify-end gap-3">
+              {effectiveSelectedDraftIds.map((draftId) => (
+                <input key={draftId} type="hidden" name="draftIds" value={draftId} />
+              ))}
+              <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.08em] text-[#8f9ca7]">
+                <input
+                  type="checkbox"
+                  checked={allSelectableChecked}
+                  onChange={(event) => toggleVisibleSelection(event.target.checked)}
+                  disabled={selectableDraftIds.length === 0}
+                  className="h-4 w-4 border border-[#32404b] bg-[#0b131c] accent-[#b5ff2a]"
+                />
+                Seleccionar visibles
+              </label>
+              <span className="text-[11px] text-[#8f9ca7]">
+                {effectiveSelectedDraftIds.length} seleccionado{effectiveSelectedDraftIds.length === 1 ? "" : "s"}
+              </span>
+              <button
+                type="submit"
+                disabled={bulkPending || effectiveSelectedDraftIds.length === 0}
+                className="bg-[#b5ff2a] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#10170d] transition hover:bg-[#c6ff58] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {bulkPending ? "Publicando..." : "Publicar seleccionados"}
+              </button>
+            </form>
+          ) : null}
         </div>
       </div>
 
-      {bulkState.error ? (
+      {showBulkPublish && bulkState.error ? (
         <div className="border-b border-[#1b242d] px-5 py-3 text-[12px] text-[#ff8e8e]">{bulkState.error}</div>
       ) : null}
-      {bulkState.success ? (
+      {showBulkPublish && bulkState.success ? (
         <div className="border-b border-[#1b242d] px-5 py-3 text-[12px] text-[#7ee081]">
           Se publicaron {bulkState.publishedCount ?? 0} borradores seleccionados.
         </div>
       ) : null}
 
-      <div className="hidden grid-cols-[0.34fr_2fr_0.95fr_0.8fr_0.75fr_0.9fr_1.2fr] gap-4 border-b border-[#1b242d] px-5 py-3 text-[10px] uppercase tracking-[0.1em] text-[#72808b] xl:grid">
-        <span>Sel.</span>
+      <div className={desktopGridClassName}>
+        {showBulkPublish ? <span>Sel.</span> : null}
         <span>Borrador</span>
         <span>Fuente</span>
         <span>Categoría</span>
@@ -160,17 +176,19 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
 
           return (
             <article key={draft.id} className="px-5 py-5">
-              <div className="hidden gap-4 xl:grid xl:grid-cols-[0.34fr_2fr_0.95fr_0.8fr_0.75fr_0.9fr_1.2fr]">
-                <div className="pt-1">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={(event) => toggleDraftSelection(draft.id, event.target.checked)}
-                    disabled={!isSelectable}
-                    aria-label={`Seleccionar ${draft.titulo}`}
-                    className="h-4 w-4 border border-[#32404b] bg-[#0b131c] accent-[#b5ff2a] disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
+              <div className={desktopRowClassName}>
+                {showBulkPublish ? (
+                  <div className="pt-1">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(event) => toggleDraftSelection(draft.id, event.target.checked)}
+                      disabled={!isSelectable}
+                      aria-label={`Seleccionar ${draft.titulo}`}
+                      className="h-4 w-4 border border-[#32404b] bg-[#0b131c] accent-[#b5ff2a] disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+                ) : null}
 
                 <div>
                   <p className="text-[15px] leading-6 text-[#edf2f5]">{draft.titulo}</p>
@@ -256,14 +274,16 @@ export function DraftQueue({ drafts }: DraftQueueProps) {
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(event) => toggleDraftSelection(draft.id, event.target.checked)}
-                        disabled={!isSelectable}
-                        aria-label={`Seleccionar ${draft.titulo}`}
-                        className="mt-1 h-4 w-4 border border-[#32404b] bg-[#0b131c] accent-[#b5ff2a] disabled:cursor-not-allowed disabled:opacity-50"
-                      />
+                      {showBulkPublish ? (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(event) => toggleDraftSelection(draft.id, event.target.checked)}
+                          disabled={!isSelectable}
+                          aria-label={`Seleccionar ${draft.titulo}`}
+                          className="mt-1 h-4 w-4 border border-[#32404b] bg-[#0b131c] accent-[#b5ff2a] disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                      ) : null}
                       <h3 className="text-[15px] leading-6 text-[#edf2f5]">{draft.titulo}</h3>
                     </div>
                     <span className={`text-[10px] uppercase tracking-[0.08em] ${riskTone[draft.riesgoEditorial]}`}>

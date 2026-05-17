@@ -25,9 +25,11 @@ export default async function AdminDraftsPage({ searchParams }: AdminDraftsPageP
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const query = resolvedSearchParams?.q?.trim() ?? "";
   const [drafts, summary] = await Promise.all([getDraftQueue(query), getEditorialSummary()]);
-  const needsReviewCount = drafts.filter((draft) => draft.estado === "needs_review").length;
-  const approvedCount = drafts.filter((draft) => draft.estado === "approved").length;
-  const publishedCount = drafts.filter((draft) => draft.estado === "published").length;
+  const activeDrafts = drafts.filter((draft) => draft.estado !== "published" && draft.estado !== "rejected");
+  const rejectedInSearchCount = drafts.filter((draft) => draft.estado === "rejected").length;
+  const publishedInSearchCount = drafts.filter((draft) => draft.estado === "published").length;
+  const needsReviewCount = activeDrafts.filter((draft) => draft.estado === "needs_review").length;
+  const approvedCount = activeDrafts.filter((draft) => draft.estado === "approved").length;
 
   return (
     <div className="min-h-screen bg-[#05090f] text-white">
@@ -40,8 +42,8 @@ export default async function AdminDraftsPage({ searchParams }: AdminDraftsPageP
             Borradores automatizados
           </h1>
           <p className="mt-5 max-w-3xl text-[15px] leading-8 text-[#b8c1c9]">
-            Panel editorial interno para revisar borradores, moverlos entre estados, editar piezas
-            publicadas y localizar cualquier artículo desde la base de datos.
+            Cola editorial interna para trabajar solo con piezas activas. Los artículos publicados y los rechazados
+            siguen accesibles desde el buscador global o, en el caso de los rechazados, desde su vista separada.
           </p>
 
           <div className="mt-8 grid gap-px bg-[#1b242d] sm:grid-cols-2 xl:grid-cols-4">
@@ -63,7 +65,7 @@ export default async function AdminDraftsPage({ searchParams }: AdminDraftsPageP
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
+          <div className="mt-6 grid gap-3 md:grid-cols-4">
             <div className="border border-[#1b242d] bg-[#0b131c] px-4 py-3">
               <p className="text-[10px] uppercase tracking-[0.08em] text-[#7f8d98]">Necesitan revisión</p>
               <p className="mt-2 text-[18px] font-semibold text-white">{needsReviewCount}</p>
@@ -73,8 +75,12 @@ export default async function AdminDraftsPage({ searchParams }: AdminDraftsPageP
               <p className="mt-2 text-[18px] font-semibold text-white">{approvedCount}</p>
             </div>
             <div className="border border-[#1b242d] bg-[#0b131c] px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.08em] text-[#7f8d98]">Publicadas</p>
-              <p className="mt-2 text-[18px] font-semibold text-white">{publishedCount}</p>
+              <p className="text-[10px] uppercase tracking-[0.08em] text-[#7f8d98]">Publicadas en búsqueda</p>
+              <p className="mt-2 text-[18px] font-semibold text-white">{query ? publishedInSearchCount : 0}</p>
+            </div>
+            <div className="border border-[#1b242d] bg-[#0b131c] px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.08em] text-[#7f8d98]">Rechazadas en búsqueda</p>
+              <p className="mt-2 text-[18px] font-semibold text-white">{query ? rejectedInSearchCount : 0}</p>
             </div>
           </div>
         </section>
@@ -84,8 +90,8 @@ export default async function AdminDraftsPage({ searchParams }: AdminDraftsPageP
             <div>
               <p className="text-[10px] uppercase tracking-[0.12em] text-[#b5ff2a]">Buscador editorial</p>
               <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#9fadb8]">
-                Busca por título, slug, fuente, autor, estado, categoría o etiquetas. Incluye piezas
-                publicadas y no publicadas.
+                Busca por título, slug, fuente, autor, estado, categoría o etiquetas. La búsqueda sí incluye piezas
+                publicadas y rechazadas, aunque no formen parte de la cola activa por defecto.
               </p>
             </div>
 
@@ -94,7 +100,7 @@ export default async function AdminDraftsPage({ searchParams }: AdminDraftsPageP
                 type="text"
                 name="q"
                 defaultValue={query}
-                placeholder="Buscar articulo, fuente, slug, autor..."
+                placeholder="Buscar artículo, fuente, slug, autor..."
                 className="min-w-0 flex-1 border border-[#22303b] bg-[#0b131c] px-4 py-3 text-[14px] text-white outline-none transition placeholder:text-[#667481] focus:border-[#b5ff2a]"
               />
               <div className="flex gap-3">
@@ -116,14 +122,23 @@ export default async function AdminDraftsPage({ searchParams }: AdminDraftsPageP
             </form>
           </div>
 
-          <div className="mt-4 text-[12px] text-[#7f8d98]">
-            {query ? (
-              <p>
-                {drafts.length} resultado{drafts.length === 1 ? "" : "s"} para <span className="text-white">{query}</span>.
-              </p>
-            ) : (
-              <p>Mostrando los 100 borradores más recientes. Usa el buscador para localizar cualquier pieza histórica o publicada.</p>
-            )}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[12px] text-[#7f8d98]">
+            <div>
+              {query ? (
+                <p>
+                  {drafts.length} resultado{drafts.length === 1 ? "" : "s"} para <span className="text-white">{query}</span>.
+                </p>
+              ) : (
+                <p>Mostrando la cola activa. Los publicados y rechazados no aparecen aquí salvo que los busques.</p>
+              )}
+            </div>
+
+            <Link
+              href="/admin/drafts/rejected"
+              className="border border-[#29333d] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-white transition hover:border-[#b5ff2a] hover:text-[#b5ff2a]"
+            >
+              Ver rechazados
+            </Link>
           </div>
         </section>
 

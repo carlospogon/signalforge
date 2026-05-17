@@ -597,6 +597,16 @@ export async function listDraftArticles(limit = 50) {
   return rows.map(mapDraftRow);
 }
 
+export async function listActiveDraftArticles(limit = 100) {
+  const rows = await listDraftArticles(limit);
+  return rows.filter((draft) => draft.estado !== "published" && draft.estado !== "rejected");
+}
+
+export async function listRejectedDraftArticles(limit = 100) {
+  const rows = await listDraftArticles(limit * 3);
+  return rows.filter((draft) => draft.estado === "rejected").slice(0, limit);
+}
+
 export async function searchDraftArticles(query: string) {
   const activeRows = await getActiveSourceRows();
   const activeIds = activeRows.map((row) => row.id);

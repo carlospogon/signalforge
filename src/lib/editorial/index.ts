@@ -1,5 +1,11 @@
 import { getEditorialSources, ingestSignals } from "@/lib/editorial/ingest";
-import { getEditorialSummaryFromDb, listDraftArticles, searchDraftArticles } from "@/lib/editorial/store";
+import {
+  getEditorialSummaryFromDb,
+  listActiveDraftArticles,
+  listDraftArticles,
+  listRejectedDraftArticles,
+  searchDraftArticles
+} from "@/lib/editorial/store";
 
 export async function getEditorialPipeline() {
   const [sources, signals, drafts] = await Promise.all([
@@ -30,7 +36,16 @@ export async function getDraftQueue(query?: string) {
     return searchDraftArticles(query);
   }
 
-  return listDraftArticles(100);
+  return listActiveDraftArticles(100);
+}
+
+export async function getRejectedDraftQueue(query?: string) {
+  if (query?.trim()) {
+    const drafts = await searchDraftArticles(query);
+    return drafts.filter((draft) => draft.estado === "rejected");
+  }
+
+  return listRejectedDraftArticles(100);
 }
 
 export async function getEditorialSummary() {
