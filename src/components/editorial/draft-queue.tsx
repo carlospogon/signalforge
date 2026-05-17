@@ -12,6 +12,7 @@ type DraftQueueProps = {
   title?: string;
   eyebrow?: string;
   showBulkPublish?: boolean;
+  editBasePath?: string;
 };
 
 const initialBulkState: BulkDraftActionState = {};
@@ -55,7 +56,8 @@ export function DraftQueue({
   drafts,
   title = "Cola editorial",
   eyebrow = "Interno",
-  showBulkPublish = true
+  showBulkPublish = true,
+  editBasePath = "/admin/drafts"
 }: DraftQueueProps) {
   const router = useRouter();
   const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
@@ -232,7 +234,7 @@ export function DraftQueue({
                 </p>
 
                 <div className="flex flex-wrap gap-2">
-                  <Link href={`/admin/drafts/${draft.id}/edit`} className={actionButtonClassName}>
+                  <Link href={`${editBasePath}/${draft.id}/edit`} className={actionButtonClassName}>
                     Editar
                   </Link>
                   {draft.estado !== "published" ? (
@@ -322,7 +324,7 @@ export function DraftQueue({
                       />
                     </>
                   ) : null}
-                  <Link href={`/admin/drafts/${draft.id}/edit`} className={actionButtonClassName}>
+                  <Link href={`${editBasePath}/${draft.id}/edit`} className={actionButtonClassName}>
                     Editar
                   </Link>
                   {draft.estado !== "published" ? (

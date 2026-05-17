@@ -133,12 +133,20 @@ export default async function AdminDraftsPage({ searchParams }: AdminDraftsPageP
               )}
             </div>
 
-            <Link
-              href="/admin/drafts/rejected"
-              className="border border-[#29333d] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-white transition hover:border-[#b5ff2a] hover:text-[#b5ff2a]"
-            >
-              Ver rechazados
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/admin/opinion"
+                className="border border-[#3a3222] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[#ffe17a] transition hover:border-[#ffe17a] hover:text-white"
+              >
+                Mesa de opinión
+              </Link>
+              <Link
+                href="/admin/drafts/rejected"
+                className="border border-[#29333d] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-white transition hover:border-[#b5ff2a] hover:text-[#b5ff2a]"
+              >
+                Ver rechazados
+              </Link>
+            </div>
           </div>
         </section>
 

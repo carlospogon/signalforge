@@ -19,6 +19,7 @@ export type BulkDraftActionState = {
 
 function revalidateEditorialPaths(category: DraftArticle["categoria"], slug?: string) {
   revalidatePath("/admin/drafts");
+  revalidatePath("/admin/opinion");
   revalidatePath("/");
   revalidatePath("/archivo");
   revalidatePath("/rss.xml");

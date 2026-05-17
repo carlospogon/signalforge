@@ -1,9 +1,12 @@
 import { getEditorialSources, ingestSignals } from "@/lib/editorial/ingest";
 import {
+  createManualOpinionDraft,
   getEditorialSummaryFromDb,
   listActiveDraftArticles,
   listDraftArticles,
+  listOpinionDraftArticles,
   listRejectedDraftArticles,
+  searchOpinionDraftArticles,
   searchDraftArticles
 } from "@/lib/editorial/store";
 
@@ -46,6 +49,18 @@ export async function getRejectedDraftQueue(query?: string) {
   }
 
   return listRejectedDraftArticles(100);
+}
+
+export async function getOpinionQueue(query?: string) {
+  if (query?.trim()) {
+    return searchOpinionDraftArticles(query);
+  }
+
+  return listOpinionDraftArticles(100);
+}
+
+export async function createOpinionDraft(reviewerName: string) {
+  return createManualOpinionDraft(reviewerName);
 }
 
 export async function getEditorialSummary() {

@@ -373,6 +373,7 @@ function buildPublishedArticlePayload(draft: DraftArticle, publishedAt: Date) {
 }
 
 const activeSourceUrls = new Set(editorialSources.map((source) => source.url));
+const manualOpinionSourceId = "manual-opinion";
 
 async function getActiveSourceRows() {
   const rows = await db.select().from(sources).orderBy(sources.nombre);
@@ -607,6 +608,11 @@ export async function listRejectedDraftArticles(limit = 100) {
   return rows.filter((draft) => draft.estado === "rejected").slice(0, limit);
 }
 
+export async function listOpinionDraftArticles(limit = 100) {
+  const rows = await listDraftArticles(limit * 3);
+  return rows.filter((draft) => draft.tipo === "opinion").slice(0, limit);
+}
+
 export async function searchDraftArticles(query: string) {
   const activeRows = await getActiveSourceRows();
   const activeIds = activeRows.map((row) => row.id);
@@ -653,9 +659,132 @@ export async function searchDraftArticles(query: string) {
     });
 }
 
+export async function searchOpinionDraftArticles(query: string) {
+  const rows = await searchDraftArticles(query);
+  return rows.filter((draft) => draft.tipo === "opinion");
+}
+
 export async function getDraftArticleById(draftId: string) {
   const [row] = await db.select().from(draftArticles).where(eq(draftArticles.id, draftId)).limit(1);
   return row ? mapDraftRow(row) : null;
+}
+
+async function ensureManualOpinionSource() {
+  const [existing] = await db.select().from(sources).where(eq(sources.id, manualOpinionSourceId)).limit(1);
+
+  if (existing) {
+    return existing;
+  }
+
+  await db.insert(sources).values({
+    id: manualOpinionSourceId,
+    nombre: "Mesa de Opinión",
+    url: "https://synaptik.local/opinion",
+    tipo: "mock",
+    categoriaPrincipal: "opinion",
+    idioma: "es",
+    nivelFiabilidad: "alta",
+    frecuenciaConsulta: "24h",
+    permiteAutopublicacion: false,
+    requiereRevision: true
+  });
+
+  const [created] = await db.select().from(sources).where(eq(sources.id, manualOpinionSourceId)).limit(1);
+
+  if (!created) {
+    throw new Error("Manual opinion source could not be created.");
+  }
+
+  return created;
+}
+
+function createOpinionSeedId(prefix: string) {
+  const randomPart = Math.random().toString(36).slice(2, 8);
+  return `${prefix}-${Date.now().toString(36)}-${randomPart}`;
+}
+
+export async function createManualOpinionDraft(reviewerName: string) {
+  const sourceRow = await ensureManualOpinionSource();
+  const createdAt = new Date();
+  const signalId = createOpinionSeedId("opinion-signal");
+  const draftId = createOpinionSeedId("draft-opinion");
+  const title = "Nueva columna de opinión";
+  const slug = `${slugifyDraftTitle(title)}-${createdAt.getTime()}`;
+  const sourceUrl = `https://synaptik.local/opinion/${slug}`;
+  const source = mapSourceRow(sourceRow);
+
+  await db.insert(importedSignals).values({
+    id: signalId,
+    sourceId: source.id,
+    tituloOriginal: title,
+    urlOriginal: sourceUrl,
+    guidOriginal: signalId,
+    fechaPublicacion: createdAt,
+    resumenOriginal: "Borrador manual de opinión pendiente de edición.",
+    palabrasClave: ["opinion"],
+    categoriaSugerida: "opinion",
+    relevancia: 85,
+    riesgoEditorial: "medio",
+    prioridadPublicacion: "alta",
+    accionSugerida: "manual_only",
+    formatoSugerido: "opinion",
+    fechaIngesta: createdAt,
+    hashUnico: signalId
+  });
+
+  const draft: DraftArticle = {
+    id: draftId,
+    titulo: title,
+    slug,
+    subtitulo: "Añade un subtítulo con la tesis central de la pieza.",
+    entradilla: "Resume aquí el ángulo editorial y por qué importa ahora.",
+    cuerpo: [
+      "Escribe aquí la apertura de la columna.",
+      "Desarrolla después el argumento principal con datos, ejemplos o contexto."
+    ],
+    categoria: "opinion",
+    etiquetas: ["opinión"],
+    fuentesConsultadas: [
+      {
+        nombre: source.nombre,
+        url: sourceUrl,
+        tipo: source.tipo
+      }
+    ],
+    estado: "draft",
+    autor: reviewerName,
+    tipo: "opinion",
+    fechaCreacion: createdAt.toISOString(),
+    fechaPublicacionOriginal: createdAt.toISOString(),
+    fechaCaptura: createdAt.toISOString(),
+    tiempoLectura: "6 min",
+    seo: {
+      canonicalPath: `/articulo/${slug}`,
+      openGraphTitle: title,
+      openGraphDescription: "Columna de opinión en preparación.",
+      twitterTitle: title,
+      twitterDescription: "Columna de opinión en preparación.",
+      fuenteOriginal: sourceUrl,
+      fechaCaptura: createdAt.toISOString(),
+      fechaPublicacionOriginal: createdAt.toISOString()
+    },
+    fuente: {
+      id: source.id,
+      nombre: source.nombre,
+      urlOriginal: sourceUrl,
+      tituloOriginal: title,
+      resumenOriginal: "Borrador manual de opinión pendiente de edición."
+    },
+    riesgoEditorial: "medio",
+    prioridadPublicacion: "alta",
+    accionSugerida: "manual_only",
+    originalSignalId: signalId
+  };
+
+  await upsertDraft(draft);
+  await recordPublicationReview(draftId, reviewerName, "draft", "Manual opinion draft created from admin.");
+
+  return draft;
 }
 
 export async function listPublishedArticles() {
