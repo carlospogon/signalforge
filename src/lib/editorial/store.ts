@@ -609,8 +609,14 @@ export async function listRejectedDraftArticles(limit = 100) {
 }
 
 export async function listOpinionDraftArticles(limit = 100) {
-  const rows = await listDraftArticles(limit * 3);
-  return rows.filter((draft) => draft.tipo === "opinion").slice(0, limit);
+  const rows = await db
+    .select()
+    .from(draftArticles)
+    .where(eq(draftArticles.tipo, "opinion"))
+    .orderBy(desc(draftArticles.updatedAt), desc(draftArticles.fechaCreacion), desc(draftArticles.createdAt))
+    .limit(limit);
+
+  return rows.map(mapDraftRow);
 }
 
 export async function searchDraftArticles(query: string) {
@@ -660,8 +666,42 @@ export async function searchDraftArticles(query: string) {
 }
 
 export async function searchOpinionDraftArticles(query: string) {
-  const rows = await searchDraftArticles(query);
-  return rows.filter((draft) => draft.tipo === "opinion");
+  const normalizedQuery = normalizeSearchText(query);
+  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+
+  if (!normalizedQuery) {
+    return listOpinionDraftArticles(100);
+  }
+
+  const rows = await db
+    .select()
+    .from(draftArticles)
+    .where(eq(draftArticles.tipo, "opinion"))
+    .orderBy(desc(draftArticles.updatedAt), desc(draftArticles.fechaCreacion), desc(draftArticles.createdAt));
+
+  return rows
+    .map(mapDraftRow)
+    .filter((draft) => {
+      const haystack = normalizeSearchText(
+        [
+          draft.titulo,
+          draft.slug,
+          draft.subtitulo,
+          draft.entradilla,
+          draft.categoria,
+          draft.estado,
+          draft.autor,
+          draft.tipo,
+          draft.fuente.nombre,
+          draft.fuente.tituloOriginal ?? "",
+          draft.fuente.urlOriginal,
+          draft.fuente.resumenOriginal ?? "",
+          draft.etiquetas.join(" ")
+        ].join(" ")
+      );
+
+      return tokens.every((token) => haystack.includes(token));
+    });
 }
 
 export async function getDraftArticleById(draftId: string) {
