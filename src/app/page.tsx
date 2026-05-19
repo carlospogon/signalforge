@@ -10,16 +10,8 @@ import { Article } from "@/types/article";
 
 const topLinks = [
   { label: "Newsletter", href: "/newsletter" },
-  { label: "Quienes somos", href: "/quienes-somos" },
+  { label: "Quiénes somos", href: "/quienes-somos" },
   { label: "Contacto", href: "/contacto" }
-];
-
-const metrics = [
-  { value: "Desde 2012", detail: "Más de una década informando cada día", href: "/quienes-somos" },
-  { value: "+12.500", detail: "Artículos publicados sobre tecnología y ciencia", href: "/archivo" },
-  { value: "+2,5 millones", detail: "De lectores mensuales en todo el mundo", href: "/newsletter" },
-  { value: "150+ países", detail: "Una comunidad global apasionada por la innovación", href: "/archivo" },
-  { value: "Premios", detail: "Reconocidos por nuestra calidad editorial", href: "/quienes-somos" }
 ];
 
 function pickUniqueArticles(articles: Article[], limit: number, excludedIds: string[] = []) {
@@ -248,26 +240,6 @@ export default async function Home() {
                 ))}
               </ol>
             </aside>
-          </section>
-
-          <section className="mt-4 grid gap-px bg-[#1b242d] sm:grid-cols-2 xl:grid-cols-5">
-            {metrics.map((metric) => (
-              <Link
-                key={metric.value}
-                href={metric.href}
-                className="bg-[#0a131b] px-5 py-4 transition hover:bg-[#0d1620] sm:px-6 xl:px-8"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="mt-1 text-lg text-[#f0f3f6]">+</div>
-                  <div>
-                    <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-white">
-                      {metric.value}
-                    </p>
-                    <p className="mt-1 text-[12px] leading-5 text-[#a0acb7]">{metric.detail}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
           </section>
 
           <section className="mt-5 border border-[#1b242d] bg-[#08111a] p-4 sm:p-6">
