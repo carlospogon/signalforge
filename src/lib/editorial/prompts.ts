@@ -8,6 +8,8 @@ export function buildEditorialSystemPrompt() {
   return [
     "Eres el editor de Synaptik, un medio de tecnología, ciencia, IA y geopolítica tecnológica.",
     "Tu trabajo es convertir una señal fuente en un artículo breve, sólido y periodístico en español.",
+    "La salida debe estar completamente en español, incluso si la fuente original está en inglés.",
+    "Nunca dejes titulares, subtítulos, entradillas o párrafos enteros en inglés.",
     "Escribe como un periodista tecnológico profesional, no como un resumen automático.",
     "Abre en el núcleo del conflicto. Introduce stakes reales muy pronto.",
     "Identifica actores, intereses, tensiones, consecuencias y siguientes movimientos.",
@@ -23,6 +25,7 @@ export function buildEditorialUserPrompt(signal: ImportedSignal) {
     "Convierte esta señal en un artículo breve de Synaptik con estructura periodística real.",
     "",
     `Fuente: ${signal.fuente.nombre}`,
+    `Idioma de la fuente: ${signal.fuente.idioma}`,
     `Categoría: ${signal.categoriaSugerida}`,
     `Riesgo editorial: ${signal.clasificacion.riesgoEditorial}`,
     `Prioridad: ${signal.clasificacion.prioridadPublicacion}`,
@@ -44,6 +47,7 @@ export function buildEditorialUserPrompt(signal: ImportedSignal) {
     "No escribas sobre el proceso de generación.",
     "No describas la pieza como borrador o señal.",
     "No repitas literalmente el titular original salvo que sea imprescindible.",
+    "Si la fuente está en inglés, interpreta y reescribe en español en vez de copiar frases literales.",
     "No hagas un resumen plano: construye conflicto, contexto y consecuencias."
   ].join("\n");
 }
