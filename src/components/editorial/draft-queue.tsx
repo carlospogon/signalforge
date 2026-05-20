@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitBulkPublishAction, type BulkDraftActionState } from "@/app/admin/drafts/actions";
+import { RemoteArticleImage } from "@/components/articles/remote-article-image";
 import { DraftActionForm } from "@/components/editorial/draft-action-form";
 import { DraftArticle } from "@/types/editorial";
 
@@ -51,6 +52,39 @@ const stateLabel = {
 
 const actionButtonClassName =
   "border border-[#2a333d] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-white transition hover:border-[#b5ff2a] hover:text-[#b5ff2a]";
+
+function DraftPreviewImage({
+  src,
+  alt,
+  className,
+  imageClassName
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  imageClassName: string;
+}) {
+  const fallback = <div className={`rounded border border-[#1b242d] bg-[#101821] ${className}`} />;
+
+  if (src.startsWith("http://") || src.startsWith("https://")) {
+    return (
+      <RemoteArticleImage
+        src={src}
+        alt={alt}
+        className={className}
+        imageClassName={imageClassName}
+        fallback={fallback}
+      />
+    );
+  }
+
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} className={`${className} ${imageClassName}`} />
+    </>
+  );
+}
 
 export function DraftQueue({
   drafts,
@@ -210,14 +244,12 @@ export function DraftQueue({
 
                 <div className="space-y-2 text-[12px] text-[#c5ced5]">
                   {draft.fuente.imagenUrl ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={draft.fuente.imagenUrl}
-                        alt={draft.fuente.imagenAlt ?? draft.titulo}
-                        className="h-16 w-full rounded border border-[#1b242d] object-cover"
-                      />
-                    </>
+                    <DraftPreviewImage
+                      src={draft.fuente.imagenUrl}
+                      alt={draft.fuente.imagenAlt ?? draft.titulo}
+                      className="h-16 w-full"
+                      imageClassName="rounded border border-[#1b242d] object-cover"
+                    />
                   ) : null}
                   <p>{draft.fuente.nombre}</p>
                   <Link href={draft.fuente.urlOriginal} target="_blank" className="text-[#8eb8ff] hover:text-white">
@@ -315,14 +347,12 @@ export function DraftQueue({
                     Fuente
                   </Link>
                   {draft.fuente.imagenUrl ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={draft.fuente.imagenUrl}
-                        alt={draft.fuente.imagenAlt ?? draft.titulo}
-                        className="h-10 w-14 rounded border border-[#1b242d] object-cover"
-                      />
-                    </>
+                    <DraftPreviewImage
+                      src={draft.fuente.imagenUrl}
+                      alt={draft.fuente.imagenAlt ?? draft.titulo}
+                      className="h-10 w-14"
+                      imageClassName="rounded border border-[#1b242d] object-cover"
+                    />
                   ) : null}
                   <Link href={`${editBasePath}/${draft.id}/edit`} className={actionButtonClassName}>
                     Editar
