@@ -224,11 +224,12 @@ function mapPublishedArticleRow(
   row: typeof publishedArticles.$inferSelect,
   draftRow?: typeof draftArticles.$inferSelect | null
 ): Article {
-  const draftFuente = draftRow?.fuente as DraftArticle["fuente"] | undefined;
-  const title = draftRow?.titulo ?? row.titulo;
-  const excerpt = draftRow?.entradilla ?? row.excerpt;
-  const deck = draftRow?.subtitulo ?? row.deck ?? undefined;
-  const body = draftRow?.cuerpo ?? row.cuerpo;
+  const shouldUseDraftContent = Boolean(draftRow && draftRow.estado === "published");
+  const draftFuente = shouldUseDraftContent ? (draftRow?.fuente as DraftArticle["fuente"] | undefined) : undefined;
+  const title = shouldUseDraftContent ? draftRow?.titulo ?? row.titulo : row.titulo;
+  const excerpt = shouldUseDraftContent ? draftRow?.entradilla ?? row.excerpt : row.excerpt;
+  const deck = shouldUseDraftContent ? draftRow?.subtitulo ?? row.deck ?? undefined : row.deck ?? undefined;
+  const body = shouldUseDraftContent ? draftRow?.cuerpo ?? row.cuerpo : row.cuerpo;
 
   return {
     id: row.slug,
@@ -781,6 +782,7 @@ export async function updateDraftState(draftId: string, estado: DraftArticle["es
     .update(draftArticles)
     .set({
       estado,
+      publishedArticleId: estado === "published" ? draft.publishedArticleId : null,
       updatedAt: new Date()
     })
     .where(eq(draftArticles.id, draftId));
@@ -838,6 +840,7 @@ export async function regenerateDraftArticleFromSignal(draftId: string, reviewer
       riesgoEditorial: regenerated.riesgoEditorial,
       prioridadPublicacion: regenerated.prioridadPublicacion,
       accionSugerida: regenerated.accionSugerida,
+      publishedArticleId: null,
       updatedAt: new Date()
     })
     .where(eq(draftArticles.id, draftId));
@@ -909,11 +912,12 @@ export async function updateDraftArticleManually(
       fuente: nextFuente,
       seo: nextSeo,
       estado: nextState,
+      publishedArticleId: wasPublished ? draftRow.publishedArticleId : null,
       updatedAt: new Date()
     })
     .where(eq(draftArticles.id, draftId));
 
-  if (draftRow.publishedArticleId) {
+  if (wasPublished && draftRow.publishedArticleId) {
     await db
       .update(publishedArticles)
       .set({

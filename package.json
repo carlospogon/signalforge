@@ -13,7 +13,8 @@
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:studio": "drizzle-kit studio",
     "editorial:ingest": "tsx scripts/editorial-ingest.ts",
-    "editorial:backfill-images": "tsx scripts/backfill-editorial-images.ts"
+    "editorial:backfill-images": "tsx scripts/backfill-editorial-images.ts",
+    "editorial:cleanup-published-links": "tsx scripts/cleanup-published-draft-links.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
