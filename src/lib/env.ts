@@ -21,5 +21,6 @@ export const env = {
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD ?? "",
   ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET ?? "",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? "",
-  GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-2.5-flash"
+  GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+  PEXELS_API_KEY: process.env.PEXELS_API_KEY ?? ""
 };

@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { decode } from "he";
+import { resolveEditorialImage } from "@/lib/editorial/image-resolution";
 import { EditorialSource, SourceSignal } from "@/types/editorial";
 
 type FeedEntry = {
@@ -205,10 +206,29 @@ export async function fetchSourceSignals(source: EditorialSource, limit = 12) {
     const xml = await response.text();
     const entries = extractEntries(xml);
 
-    return entries
+    const normalizedEntries = entries
       .map((entry, index) => normalizeEntry(source, entry, index))
       .filter((entry): entry is SourceSignal => entry !== null)
       .slice(0, limit);
+
+    return Promise.all(
+      normalizedEntries.map(async (entry) => {
+        const resolved = await resolveEditorialImage({
+          articleUrl: entry.urlOriginal,
+          title: entry.tituloOriginal,
+          summary: entry.resumenOriginal,
+          keywords: entry.palabrasClave,
+          category: source.categoriaPrincipal,
+          existingImageUrl: entry.imagenUrl
+        });
+
+        return {
+          ...entry,
+          imagenUrl: resolved.imageUrl ?? entry.imagenUrl,
+          imagenAlt: resolved.imageAlt ?? entry.imagenAlt
+        };
+      })
+    );
   } finally {
     clearTimeout(timeoutId);
   }
