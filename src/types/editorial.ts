@@ -59,6 +59,17 @@ export type EditorialClassification = {
   formatoSugerido: DraftType;
 };
 
+export type EditorialBrief = {
+  movementType: string;
+  stage: string;
+  scope: string;
+  actors: string[];
+  keyPoint: string;
+  whyItMatters: string;
+  editorialFocus: string;
+  nextSignals: string;
+};
+
 export type ImportedSignal = {
   id: string;
   tituloOriginal: string;
@@ -110,11 +121,14 @@ export type DraftArticle = {
   fuente: {
     id: string;
     nombre: string;
+    tipoFuente?: SourceType;
     urlOriginal: string;
     tituloOriginal?: string;
     resumenOriginal?: string;
     imagenUrl?: string;
     imagenAlt?: string;
+    idioma?: "es" | "en";
+    briefEditorial?: EditorialBrief;
   };
   riesgoEditorial: EditorialRisk;
   prioridadPublicacion: EditorialPriority;

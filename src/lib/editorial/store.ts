@@ -9,6 +9,7 @@ import {
 } from "@/db/schema";
 import { editorialSources } from "@/data/editorial-sources";
 import { generateDraftArticle } from "@/lib/editorial/drafts";
+import { buildEditorialBrief } from "@/lib/editorial/brief";
 import { resolveImageUrlInput } from "@/lib/editorial/image-resolution";
 import { fetchSourceSignals } from "@/lib/editorial/feed";
 import { classifySignal } from "@/lib/editorial/classify";
@@ -185,6 +186,22 @@ function withDraftMedia(signal: ImportedSignal, draftRow: typeof draftArticles.$
 }
 
 function mapDraftRow(row: typeof draftArticles.$inferSelect): DraftArticle {
+  const fuente = row.fuente as DraftArticle["fuente"];
+  const briefEditorial =
+    fuente.briefEditorial ??
+    buildEditorialBrief({
+      sourceName: fuente.nombre,
+      sourceType: fuente.tipoFuente ?? "rss",
+      sourceLanguage: fuente.idioma,
+      category: row.categoria,
+      title: fuente.tituloOriginal ?? row.titulo,
+      summary: fuente.resumenOriginal ?? row.subtitulo,
+      keywords: row.etiquetas,
+      suggestedType: row.tipo,
+      risk: row.riesgoEditorial,
+      priority: row.prioridadPublicacion
+    });
+
   return {
     id: row.id,
     titulo: row.titulo,
@@ -203,7 +220,10 @@ function mapDraftRow(row: typeof draftArticles.$inferSelect): DraftArticle {
     fechaCaptura: row.fechaCaptura.toISOString(),
     tiempoLectura: row.tiempoLectura,
     seo: row.seo as DraftArticle["seo"],
-    fuente: row.fuente as DraftArticle["fuente"],
+    fuente: {
+      ...fuente,
+      briefEditorial
+    },
     riesgoEditorial: row.riesgoEditorial,
     prioridadPublicacion: row.prioridadPublicacion,
     accionSugerida: row.accionSugerida,

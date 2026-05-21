@@ -26,6 +26,14 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function formatMovementLabel(value?: string) {
+  if (!value) {
+    return "Movimiento";
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 const riskTone = {
   bajo: "text-[#7ee081]",
   medio: "text-[#ffd76c]",
@@ -209,6 +217,7 @@ export function DraftQueue({
         {drafts.map((draft) => {
           const isSelectable = draft.estado !== "published";
           const isSelected = effectiveSelectedDraftIds.includes(draft.id);
+          const brief = draft.fuente.briefEditorial;
 
           return (
             <article key={draft.id} className="px-5 py-5">
@@ -228,12 +237,37 @@ export function DraftQueue({
 
                 <div>
                   <p className="text-[15px] leading-6 text-[#edf2f5]">{draft.titulo}</p>
-                  <p className="mt-2 max-w-2xl text-[12px] leading-6 text-[#c4d0d8]">{draft.subtitulo}</p>
-                  <p className="mt-2 max-w-2xl text-[12px] leading-6 text-[#9eabb5]">{draft.entradilla}</p>
+                  {draft.fuente.tituloOriginal ? (
+                    <p className="mt-2 max-w-2xl text-[12px] leading-6 text-[#8eb8ff]">
+                      Fuente original: {draft.fuente.tituloOriginal}
+                    </p>
+                  ) : null}
                   {draft.fuente.resumenOriginal ? (
                     <p className="mt-2 max-w-2xl text-[12px] leading-6 text-[#7f8d98]">
                       Origen: {draft.fuente.resumenOriginal}
                     </p>
+                  ) : null}
+                  {brief ? (
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <div className="border border-[#182029] bg-[#0b131c] px-3 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">
+                          {formatMovementLabel(brief.movementType)}
+                        </p>
+                        <p className="mt-2 text-[12px] leading-6 text-[#d6dde3]">{brief.keyPoint}</p>
+                      </div>
+                      <div className="border border-[#182029] bg-[#0b131c] px-3 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">Por que importa</p>
+                        <p className="mt-2 text-[12px] leading-6 text-[#d6dde3]">{brief.whyItMatters}</p>
+                      </div>
+                      <div className="border border-[#182029] bg-[#0b131c] px-3 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">Foco editorial</p>
+                        <p className="mt-2 text-[12px] leading-6 text-[#d6dde3]">{brief.editorialFocus}</p>
+                      </div>
+                      <div className="border border-[#182029] bg-[#0b131c] px-3 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">Siguientes senales</p>
+                        <p className="mt-2 text-[12px] leading-6 text-[#d6dde3]">{brief.nextSignals}</p>
+                      </div>
+                    </div>
                   ) : null}
                   <div className="mt-3 flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.08em] text-[#72808b]">
                     <span>{draft.tipo}</span>
@@ -325,9 +359,33 @@ export function DraftQueue({
                     </span>
                   </div>
                   <p className="text-[12px] leading-6 text-[#c4d0d8]">{draft.subtitulo}</p>
-                  <p className="text-[12px] leading-6 text-[#a4afb8]">{draft.entradilla}</p>
+                  {draft.fuente.tituloOriginal ? (
+                    <p className="text-[12px] leading-6 text-[#8eb8ff]">Fuente original: {draft.fuente.tituloOriginal}</p>
+                  ) : null}
                   {draft.fuente.resumenOriginal ? (
                     <p className="text-[12px] leading-6 text-[#7f8d98]">Origen: {draft.fuente.resumenOriginal}</p>
+                  ) : null}
+                  {brief ? (
+                    <div className="grid gap-3">
+                      <div className="border border-[#182029] bg-[#0b131c] px-3 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">
+                          {formatMovementLabel(brief.movementType)}
+                        </p>
+                        <p className="mt-2 text-[12px] leading-6 text-[#d6dde3]">{brief.keyPoint}</p>
+                      </div>
+                      <div className="border border-[#182029] bg-[#0b131c] px-3 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">Por que importa</p>
+                        <p className="mt-2 text-[12px] leading-6 text-[#d6dde3]">{brief.whyItMatters}</p>
+                      </div>
+                      <div className="border border-[#182029] bg-[#0b131c] px-3 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">Foco editorial</p>
+                        <p className="mt-2 text-[12px] leading-6 text-[#d6dde3]">{brief.editorialFocus}</p>
+                      </div>
+                      <div className="border border-[#182029] bg-[#0b131c] px-3 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-[#b5ff2a]">Siguientes senales</p>
+                        <p className="mt-2 text-[12px] leading-6 text-[#d6dde3]">{brief.nextSignals}</p>
+                      </div>
+                    </div>
                   ) : null}
                 </div>
 

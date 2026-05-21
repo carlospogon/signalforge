@@ -1,3 +1,4 @@
+import { buildEditorialBrief } from "@/lib/editorial/brief";
 import { generateEditorialArticle } from "@/lib/editorial/generate-article";
 import { DraftArticle, ImportedSignal } from "@/types/editorial";
 
@@ -43,6 +44,18 @@ export async function generateDraftArticle(signal: ImportedSignal): Promise<Draf
   }
 
   const generated = await generateEditorialArticle(signal);
+  const briefEditorial = buildEditorialBrief({
+    sourceName: signal.fuente.nombre,
+    sourceType: signal.fuente.tipo,
+    sourceLanguage: signal.fuente.idioma,
+    category: signal.categoriaSugerida,
+    title: signal.tituloOriginal,
+    summary: signal.resumenOriginal,
+    keywords: signal.palabrasClave,
+    suggestedType: signal.clasificacion.formatoSugerido,
+    risk: signal.clasificacion.riesgoEditorial,
+    priority: signal.clasificacion.prioridadPublicacion
+  });
   const titulo = generated.title;
   const slug = slugify(titulo);
 
@@ -82,11 +95,14 @@ export async function generateDraftArticle(signal: ImportedSignal): Promise<Draf
     fuente: {
       id: signal.fuente.id,
       nombre: signal.fuente.nombre,
+      tipoFuente: signal.fuente.tipo,
       urlOriginal: signal.urlOriginal,
       tituloOriginal: signal.tituloOriginal,
       resumenOriginal: signal.resumenOriginal,
       imagenUrl: signal.imagenUrl,
-      imagenAlt: signal.imagenAlt
+      imagenAlt: signal.imagenAlt,
+      idioma: signal.fuente.idioma,
+      briefEditorial
     },
     riesgoEditorial: signal.clasificacion.riesgoEditorial,
     prioridadPublicacion: signal.clasificacion.prioridadPublicacion,

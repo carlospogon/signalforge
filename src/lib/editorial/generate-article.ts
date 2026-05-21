@@ -1,3 +1,4 @@
+import { buildEditorialBrief } from "@/lib/editorial/brief";
 import { buildEditorialSystemPrompt, buildEditorialUserPrompt } from "@/lib/editorial/prompts";
 import { env } from "@/lib/env";
 import { restoreSpanishText } from "@/lib/spanish";
@@ -85,27 +86,39 @@ function buildSpanishFallbackTitle(signal: ImportedSignal) {
     case "ia":
       return "La carrera de la IA abre un nuevo frente";
     case "ciencia":
-      return "Una nueva señal reordena el pulso científico";
+      return "Una nueva senal reordena el pulso cientifico";
     case "tecnologia":
-      return "El sector tecnológico suma un movimiento con impacto abierto";
+      return "El sector tecnologico suma un movimiento con impacto abierto";
     case "espacio":
-      return "La competencia espacial gana una nueva variable estratégica";
+      return "La competencia espacial gana una nueva variable estrategica";
     case "salud":
-      return "La innovación en salud entra en una fase de validación decisiva";
+      return "La innovacion en salud entra en una fase de validacion decisiva";
     case "biotech":
-      return "La biotecnología afronta un movimiento con implicaciones amplias";
+      return "La biotecnologia afronta un movimiento con implicaciones amplias";
     case "ciberseguridad":
-      return "La presión sobre la ciberseguridad escala con un nuevo frente";
+      return "La presion sobre la ciberseguridad escala con un nuevo frente";
     case "laboratorio":
       return "Una prueba de laboratorio anticipa un cambio de criterio";
     case "opinion":
-      return "La discusión tecnológica exige una nueva lectura editorial";
+      return "La discusion tecnologica exige una nueva lectura editorial";
     default:
-      return "Una nueva señal obliga a releer el equilibrio del sector";
+      return "Una nueva senal obliga a releer el equilibrio del sector";
   }
 }
 
 function buildFallback(signal: ImportedSignal): GeneratedEditorialArticle {
+  const brief = buildEditorialBrief({
+    sourceName: signal.fuente.nombre,
+    sourceType: signal.fuente.tipo,
+    sourceLanguage: signal.fuente.idioma,
+    category: signal.categoriaSugerida,
+    title: signal.tituloOriginal,
+    summary: signal.resumenOriginal,
+    keywords: signal.palabrasClave,
+    suggestedType: signal.clasificacion.formatoSugerido,
+    risk: signal.clasificacion.riesgoEditorial,
+    priority: signal.clasificacion.prioridadPublicacion
+  });
   const source = signal.fuente.nombre;
   const originalSummary = cleanModelText(signal.resumenOriginal || signal.tituloOriginal);
   const sourceLooksEnglish =
@@ -113,15 +126,9 @@ function buildFallback(signal: ImportedSignal): GeneratedEditorialArticle {
   const title = sourceLooksEnglish
     ? buildSpanishFallbackTitle(signal)
     : cleanModelText(originalSummary.endsWith(".") ? originalSummary.slice(0, -1) : originalSummary);
-  const subtitle = cleanModelText(
-    `${source} coloca esta señal dentro de una disputa más amplia en ${signal.categoriaSugerida}, con implicaciones que todavía no están cerradas.`
-  );
-  const excerpt = cleanModelText(
-    `${title}. La clave no es solo el anuncio, sino qué cambia para los actores implicados y qué recorrido real puede tener en el sector.`
-  );
-  const summaryReference = sourceLooksEnglish
-    ? "el movimiento detectado por la fuente"
-    : originalSummary.toLowerCase();
+  const subtitle = cleanModelText(`${brief.keyPoint} ${brief.whyItMatters}`);
+  const excerpt = cleanModelText(`${brief.editorialFocus} ${brief.nextSignals}`);
+  const summaryReference = sourceLooksEnglish ? brief.movementType : originalSummary.toLowerCase();
 
   return {
     title,
@@ -129,19 +136,13 @@ function buildFallback(signal: ImportedSignal): GeneratedEditorialArticle {
     excerpt,
     body: [
       cleanModelText(
-        `${source} ha puesto sobre la mesa ${summaryReference}. La noticia importa porque puede alterar prioridades industriales, científicas o empresariales más allá del titular inicial.`
+        `${source} apunta a ${summaryReference} con un alcance hoy situado en ${brief.scope}. La clave es separar hecho confirmado, ritmo de despliegue y efectos de segundo orden.`
       ),
-      cleanModelText(
-        "La lectura editorial empieza por identificar quién gana tiempo, quién queda bajo presión y qué condiciona el siguiente movimiento del mercado o de la investigación."
-      ),
-      cleanModelText(
-        "También conviene separar la promesa del despliegue real: no todas las señales cambian el equilibrio del sector, pero algunas sí anticipan una reorganización de poder, inversión o regulación."
-      ),
-      cleanModelText(
-        "Para Synaptik, el valor está en seguir confirmaciones, respuestas de competidores y efectos económicos o políticos antes de convertir esta pieza en una cobertura más profunda."
-      )
+      cleanModelText(brief.whyItMatters),
+      cleanModelText(brief.editorialFocus),
+      cleanModelText(brief.nextSignals)
     ],
-    tag: signal.clasificacion.formatoSugerido === "analysis" ? "Análisis" : "Radar"
+    tag: signal.clasificacion.formatoSugerido === "analysis" ? "Analisis" : "Radar"
   };
 }
 

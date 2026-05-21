@@ -1,3 +1,4 @@
+import { buildEditorialBrief } from "@/lib/editorial/brief";
 import { ImportedSignal } from "@/types/editorial";
 
 function joinKeywords(signal: ImportedSignal) {
@@ -21,6 +22,19 @@ export function buildEditorialSystemPrompt() {
 }
 
 export function buildEditorialUserPrompt(signal: ImportedSignal) {
+  const brief = buildEditorialBrief({
+    sourceName: signal.fuente.nombre,
+    sourceType: signal.fuente.tipo,
+    sourceLanguage: signal.fuente.idioma,
+    category: signal.categoriaSugerida,
+    title: signal.tituloOriginal,
+    summary: signal.resumenOriginal,
+    keywords: signal.palabrasClave,
+    suggestedType: signal.clasificacion.formatoSugerido,
+    risk: signal.clasificacion.riesgoEditorial,
+    priority: signal.clasificacion.prioridadPublicacion
+  });
+
   return [
     "Convierte esta señal en un artículo breve de Synaptik con estructura periodística real.",
     "",
@@ -34,6 +48,16 @@ export function buildEditorialUserPrompt(signal: ImportedSignal) {
     `Resumen original: ${signal.resumenOriginal}`,
     `Palabras clave: ${joinKeywords(signal)}`,
     `URL original: ${signal.urlOriginal}`,
+    "",
+    "Brief editorial previo:",
+    `- tipo de movimiento: ${brief.movementType}`,
+    `- fase: ${brief.stage}`,
+    `- alcance: ${brief.scope}`,
+    `- actores detectados: ${brief.actors.join(", ")}`,
+    `- lectura base: ${brief.keyPoint}`,
+    `- por que importa: ${brief.whyItMatters}`,
+    `- foco editorial: ${brief.editorialFocus}`,
+    `- siguientes senales: ${brief.nextSignals}`,
     "",
     "Quiero este resultado:",
     "- titular limpio y fuerte, sin prefijos de marca",
