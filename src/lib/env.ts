@@ -22,5 +22,6 @@ export const env = {
   ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET ?? "",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? "",
   GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
-  PEXELS_API_KEY: process.env.PEXELS_API_KEY ?? ""
+  PEXELS_API_KEY: process.env.PEXELS_API_KEY ?? "",
+  EDITORIAL_DAILY_BATCH_SIZE: Number.parseInt(process.env.EDITORIAL_DAILY_BATCH_SIZE ?? "10", 10) || 10
 };

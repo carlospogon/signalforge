@@ -5,9 +5,18 @@ loadEnv({ path: ".env.local" });
 loadEnv();
 
 async function main() {
-  await refreshEditorialData();
+  const batch = await refreshEditorialData();
   const summary = await getEditorialSummaryFromDb();
-  console.log(JSON.stringify(summary, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        summary,
+        batch
+      },
+      null,
+      2
+    )
+  );
 }
 
 main().catch((error) => {

@@ -19,11 +19,12 @@ export async function GET(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  await refreshEditorialData();
+  const batch = await refreshEditorialData();
   const summary = await getEditorialSummaryFromDb();
 
   return Response.json({
     ok: true,
+    batch,
     summary
   });
 }

@@ -10,6 +10,7 @@ import {
 import { editorialSources } from "@/data/editorial-sources";
 import { generateDraftArticle } from "@/lib/editorial/drafts";
 import { buildEditorialBrief } from "@/lib/editorial/brief";
+import { env } from "@/lib/env";
 import { resolveImageUrlInput } from "@/lib/editorial/image-resolution";
 import { fetchSourceSignals } from "@/lib/editorial/feed";
 import { classifySignal } from "@/lib/editorial/classify";
@@ -240,6 +241,80 @@ function slugifyDraftTitle(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function formatMadridDay(value: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(value);
+}
+
+function priorityScore(value: ImportedSignal["clasificacion"]["prioridadPublicacion"]) {
+  switch (value) {
+    case "urgente":
+      return 4;
+    case "alta":
+      return 3;
+    case "media":
+      return 2;
+    default:
+      return 1;
+  }
+}
+
+function compareImportedSignals(a: ImportedSignal, b: ImportedSignal) {
+  const priorityDelta = priorityScore(b.clasificacion.prioridadPublicacion) - priorityScore(a.clasificacion.prioridadPublicacion);
+
+  if (priorityDelta !== 0) {
+    return priorityDelta;
+  }
+
+  const relevanceDelta = b.clasificacion.relevancia - a.clasificacion.relevancia;
+
+  if (relevanceDelta !== 0) {
+    return relevanceDelta;
+  }
+
+  return new Date(b.fechaPublicacion).getTime() - new Date(a.fechaPublicacion).getTime();
+}
+
+function pickDailyBatchSignals(signals: ImportedSignal[], limit: number) {
+  const sorted = [...signals].sort(compareImportedSignals);
+  const selected: ImportedSignal[] = [];
+  const usedIds = new Set<string>();
+  const coveredCategories = new Set<ImportedSignal["categoriaSugerida"]>();
+
+  for (const signal of sorted) {
+    if (selected.length >= limit) {
+      break;
+    }
+
+    if (coveredCategories.has(signal.categoriaSugerida)) {
+      continue;
+    }
+
+    selected.push(signal);
+    usedIds.add(signal.id);
+    coveredCategories.add(signal.categoriaSugerida);
+  }
+
+  for (const signal of sorted) {
+    if (selected.length >= limit) {
+      break;
+    }
+
+    if (usedIds.has(signal.id)) {
+      continue;
+    }
+
+    selected.push(signal);
+    usedIds.add(signal.id);
+  }
+
+  return selected;
+}
+
 function mapPublishedArticleRow(
   row: typeof publishedArticles.$inferSelect,
   draftRow?: typeof draftArticles.$inferSelect | null
@@ -437,6 +512,76 @@ async function upsertDraft(draft: DraftArticle) {
     });
 }
 
+async function createDraftBatchFromImportedSignals(
+  persistedSources: EditorialSource[],
+  batchSize: number
+) {
+  const activeIds = persistedSources.map((source) => source.id);
+
+  if (activeIds.length === 0 || batchSize <= 0) {
+    return {
+      requestedBatchSize: batchSize,
+      availableBatchSlots: 0,
+      createdDrafts: 0,
+      selectedSignalIds: [] as string[]
+    };
+  }
+
+  const today = formatMadridDay(new Date());
+  const existingDraftRows = await db
+    .select({
+      signalId: draftArticles.signalId,
+      fechaCreacion: draftArticles.fechaCreacion,
+      tipo: draftArticles.tipo
+    })
+    .from(draftArticles)
+    .where(inArray(draftArticles.sourceId, activeIds));
+  const draftedSignalIds = new Set(existingDraftRows.map((row) => row.signalId));
+  const createdTodayCount = existingDraftRows.filter(
+    (row) => row.tipo !== "opinion" && formatMadridDay(row.fechaCreacion) === today
+  ).length;
+  const availableBatchSlots = Math.max(batchSize - createdTodayCount, 0);
+
+  if (availableBatchSlots === 0) {
+    return {
+      requestedBatchSize: batchSize,
+      availableBatchSlots,
+      createdDrafts: 0,
+      selectedSignalIds: [] as string[]
+    };
+  }
+
+  const signalRows = await db
+    .select()
+    .from(importedSignals)
+    .where(inArray(importedSignals.sourceId, activeIds))
+    .orderBy(desc(importedSignals.fechaPublicacion), desc(importedSignals.createdAt));
+  const sourceMap = new Map(persistedSources.map((source) => [source.id, source]));
+  const candidates = signalRows
+    .filter((row) => !draftedSignalIds.has(row.id) && row.categoriaSugerida !== "opinion")
+    .map((row) => {
+      const source = sourceMap.get(row.sourceId);
+      return source ? mapSignalRow(row, source) : null;
+    })
+    .filter((signal): signal is ImportedSignal => signal !== null);
+  const selectedSignals = pickDailyBatchSignals(candidates, availableBatchSlots);
+
+  for (const signal of selectedSignals) {
+    await upsertDraft({
+      ...(await generateDraftArticle(signal)),
+      id: `draft-${signal.id}`,
+      originalSignalId: signal.id
+    });
+  }
+
+  return {
+    requestedBatchSize: batchSize,
+    availableBatchSlots,
+    createdDrafts: selectedSignals.length,
+    selectedSignalIds: selectedSignals.map((signal) => signal.id)
+  };
+}
+
 export async function refreshEditorialData() {
   const persistedSources = await syncEditorialSources();
 
@@ -446,26 +591,14 @@ export async function refreshEditorialData() {
 
       for (const rawSignal of rawSignals) {
         const imported = buildImportedSignal(rawSignal, source);
-        const signalId = await upsertImportedSignal(imported);
-
-        if (imported.categoriaSugerida === "opinion") {
-          continue;
-        }
-
-        try {
-          await upsertDraft({
-            ...(await generateDraftArticle(imported)),
-            id: `draft-${signalId}`,
-            originalSignalId: signalId
-          });
-        } catch {
-          // Invalid or manual-only drafts stay outside the automatic queue.
-        }
+        await upsertImportedSignal(imported);
       }
     } catch (error) {
       console.error(`Editorial ingestion failed for source ${source.id}`, error);
     }
   }
+
+  return createDraftBatchFromImportedSignals(persistedSources, env.EDITORIAL_DAILY_BATCH_SIZE);
 }
 
 export async function listEditorialSources() {
