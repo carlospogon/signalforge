@@ -15,6 +15,7 @@
     "editorial:ingest": "tsx scripts/editorial-ingest.ts",
     "editorial:backfill-images": "tsx scripts/backfill-editorial-images.ts",
     "editorial:refresh-drafts": "tsx scripts/refresh-editorial-drafts.ts",
+    "editorial:trim-active-drafts": "tsx scripts/trim-active-drafts.ts",
     "editorial:cleanup-published-links": "tsx scripts/cleanup-published-draft-links.ts"
   },
   "dependencies": {
