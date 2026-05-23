@@ -70,6 +70,12 @@ export type EditorialBrief = {
   nextSignals: string;
 };
 
+export type EditorialBatchMeta = {
+  batchId: string;
+  batchDate: string;
+  autoPublishCandidate: boolean;
+};
+
 export type ImportedSignal = {
   id: string;
   tituloOriginal: string;
@@ -129,6 +135,7 @@ export type DraftArticle = {
     imagenAlt?: string;
     idioma?: "es" | "en";
     briefEditorial?: EditorialBrief;
+    batchMeta?: EditorialBatchMeta;
   };
   riesgoEditorial: EditorialRisk;
   prioridadPublicacion: EditorialPriority;

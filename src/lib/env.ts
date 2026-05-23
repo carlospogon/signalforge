@@ -13,6 +13,14 @@ function requireEnv(name: string, fallback?: string) {
   return value;
 }
 
+function parseBooleanEnv(value: string | undefined, fallback = false) {
+  if (!value) {
+    return fallback;
+  }
+
+  return /^(1|true|yes|on)$/i.test(value);
+}
+
 export const env = {
   DATABASE_URL: requireEnv("DATABASE_URL"),
   DIRECT_DATABASE_URL: requireEnv("DIRECT_DATABASE_URL", process.env.DATABASE_URL),
@@ -23,5 +31,6 @@ export const env = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? "",
   GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
   PEXELS_API_KEY: process.env.PEXELS_API_KEY ?? "",
-  EDITORIAL_DAILY_BATCH_SIZE: Number.parseInt(process.env.EDITORIAL_DAILY_BATCH_SIZE ?? "10", 10) || 10
+  EDITORIAL_DAILY_BATCH_SIZE: Number.parseInt(process.env.EDITORIAL_DAILY_BATCH_SIZE ?? "10", 10) || 10,
+  EDITORIAL_AUTO_PUBLISH: parseBooleanEnv(process.env.EDITORIAL_AUTO_PUBLISH, false)
 };

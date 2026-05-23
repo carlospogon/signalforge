@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, or } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne, or } from "drizzle-orm";
 import { db } from "@/db";
 import {
   draftArticles,
@@ -268,6 +268,10 @@ function formatMadridDay(value: Date) {
     month: "2-digit",
     day: "2-digit"
   }).format(value);
+}
+
+function buildDailyBatchId(value: Date) {
+  return `daily-${formatMadridDay(value)}`;
 }
 
 function priorityScore(value: ImportedSignal["clasificacion"]["prioridadPublicacion"]) {
@@ -548,18 +552,26 @@ async function createDraftBatchFromImportedSignals(
   }
 
   const today = formatMadridDay(new Date());
+  const batchId = buildDailyBatchId(new Date());
   const existingDraftRows = await db
     .select({
       signalId: draftArticles.signalId,
       fechaCreacion: draftArticles.fechaCreacion,
-      tipo: draftArticles.tipo
+      tipo: draftArticles.tipo,
+      estado: draftArticles.estado,
+      fuente: draftArticles.fuente
     })
     .from(draftArticles)
     .where(inArray(draftArticles.sourceId, activeIds));
   const draftedSignalIds = new Set(existingDraftRows.map((row) => row.signalId));
-  const createdTodayCount = existingDraftRows.filter(
-    (row) => row.tipo !== "opinion" && formatMadridDay(row.fechaCreacion) === today
-  ).length;
+  const createdTodayCount = existingDraftRows.filter((row) => {
+    if (row.tipo === "opinion" || formatMadridDay(row.fechaCreacion) !== today) {
+      return false;
+    }
+
+    const fuente = row.fuente as DraftArticle["fuente"];
+    return fuente.batchMeta?.batchId === batchId;
+  }).length;
   const availableBatchSlots = Math.max(batchSize - createdTodayCount, 0);
 
   if (availableBatchSlots === 0) {
@@ -585,20 +597,52 @@ async function createDraftBatchFromImportedSignals(
     })
     .filter((signal): signal is ImportedSignal => signal !== null);
   const selectedSignals = pickDailyBatchSignals(candidates, availableBatchSlots);
+  const createdDraftIds: string[] = [];
+  const publishedDraftIds: string[] = [];
+  const skippedAutoPublishDraftIds: string[] = [];
 
   for (const signal of selectedSignals) {
     const hydratedSignal = await withResolvedSignalMedia(signal);
-    await upsertDraft({
-      ...(await generateDraftArticle(hydratedSignal)),
+    const generatedDraft = await generateDraftArticle(hydratedSignal);
+    const nextDraft: DraftArticle = {
+      ...generatedDraft,
       id: `draft-${hydratedSignal.id}`,
-      originalSignalId: hydratedSignal.id
-    });
+      originalSignalId: hydratedSignal.id,
+      accionSugerida: "autopublish_candidate",
+      fuente: {
+        ...generatedDraft.fuente,
+        batchMeta: {
+          batchId,
+          batchDate: today,
+          autoPublishCandidate: true
+        }
+      }
+    };
+
+    await upsertDraft(nextDraft);
+    createdDraftIds.push(nextDraft.id);
+
+    if (env.EDITORIAL_AUTO_PUBLISH) {
+      if (nextDraft.fuente.imagenUrl) {
+        await publishDraftArticle(nextDraft.id, "Synaptik Auto");
+        publishedDraftIds.push(nextDraft.id);
+      } else {
+        skippedAutoPublishDraftIds.push(nextDraft.id);
+      }
+    }
   }
 
   return {
+    autoPublishEnabled: env.EDITORIAL_AUTO_PUBLISH,
+    batchId,
+    batchDate: today,
     requestedBatchSize: batchSize,
     availableBatchSlots,
     createdDrafts: selectedSignals.length,
+    createdDraftIds,
+    publishedDrafts: publishedDraftIds.length,
+    publishedDraftIds,
+    skippedAutoPublishDraftIds,
     selectedSignalIds: selectedSignals.map((signal) => signal.id)
   };
 }
@@ -1198,7 +1242,12 @@ export async function getEditorialSummaryFromDb() {
     .select({ value: count() })
     .from(draftArticles)
     .where(
-      and(inArray(draftArticles.sourceId, activeIds), eq(draftArticles.accionSugerida, "autopublish_candidate"))
+      and(
+        inArray(draftArticles.sourceId, activeIds),
+        eq(draftArticles.accionSugerida, "autopublish_candidate"),
+        ne(draftArticles.estado, "published"),
+        ne(draftArticles.estado, "rejected")
+      )
     );
 
   return {
