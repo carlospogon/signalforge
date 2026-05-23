@@ -11,7 +11,7 @@ import { editorialSources } from "@/data/editorial-sources";
 import { generateDraftArticle } from "@/lib/editorial/drafts";
 import { buildEditorialBrief } from "@/lib/editorial/brief";
 import { env } from "@/lib/env";
-import { resolveImageUrlInput } from "@/lib/editorial/image-resolution";
+import { resolveEditorialImage, resolveImageUrlInput } from "@/lib/editorial/image-resolution";
 import { fetchSourceSignals } from "@/lib/editorial/feed";
 import { classifySignal } from "@/lib/editorial/classify";
 import { restoreSpanishText } from "@/lib/spanish";
@@ -183,6 +183,26 @@ function withDraftMedia(signal: ImportedSignal, draftRow: typeof draftArticles.$
     ...signal,
     imagenUrl: draftFuente.imagenUrl,
     imagenAlt: draftFuente.imagenAlt
+  };
+}
+
+async function withResolvedSignalMedia(signal: ImportedSignal): Promise<ImportedSignal> {
+  if (signal.imagenUrl) {
+    return signal;
+  }
+
+  const resolved = await resolveEditorialImage({
+    articleUrl: signal.urlOriginal,
+    title: signal.tituloOriginal,
+    summary: signal.resumenOriginal,
+    keywords: signal.palabrasClave,
+    category: signal.categoriaSugerida
+  });
+
+  return {
+    ...signal,
+    imagenUrl: resolved.imageUrl,
+    imagenAlt: resolved.imageAlt ?? signal.tituloOriginal
   };
 }
 
@@ -567,10 +587,11 @@ async function createDraftBatchFromImportedSignals(
   const selectedSignals = pickDailyBatchSignals(candidates, availableBatchSlots);
 
   for (const signal of selectedSignals) {
+    const hydratedSignal = await withResolvedSignalMedia(signal);
     await upsertDraft({
-      ...(await generateDraftArticle(signal)),
-      id: `draft-${signal.id}`,
-      originalSignalId: signal.id
+      ...(await generateDraftArticle(hydratedSignal)),
+      id: `draft-${hydratedSignal.id}`,
+      originalSignalId: hydratedSignal.id
     });
   }
 
