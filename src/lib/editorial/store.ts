@@ -261,6 +261,38 @@ function slugifyDraftTitle(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function buildSlugCandidate(baseSlug: string, attempt: number, seed?: string) {
+  if (attempt === 0) {
+    return baseSlug;
+  }
+
+  if (attempt === 1 && seed) {
+    return `${baseSlug}-${seed}`;
+  }
+
+  return `${baseSlug}-${attempt}`;
+}
+
+async function ensureUniqueDraftSlug(preferredSlug: string, draftId: string) {
+  const normalizedBase = slugifyDraftTitle(preferredSlug) || "articulo";
+  const slugSeed = draftId.replace(/^draft-/, "").slice(-8);
+
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const candidate = buildSlugCandidate(normalizedBase, attempt, slugSeed);
+    const [existingDraft] = await db
+      .select({ id: draftArticles.id })
+      .from(draftArticles)
+      .where(and(eq(draftArticles.slug, candidate), ne(draftArticles.id, draftId)))
+      .limit(1);
+
+    if (!existingDraft) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`Could not generate a unique draft slug for ${draftId}.`);
+}
+
 function formatMadridDay(value: Date) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Madrid",
@@ -480,6 +512,12 @@ async function upsertImportedSignal(signal: ImportedSignal) {
 }
 
 async function upsertDraft(draft: DraftArticle) {
+  const uniqueSlug = await ensureUniqueDraftSlug(draft.slug, draft.id);
+  const nextSeo = {
+    ...draft.seo,
+    canonicalPath: `/articulo/${uniqueSlug}`
+  };
+
   await db
     .insert(draftArticles)
     .values({
@@ -487,7 +525,7 @@ async function upsertDraft(draft: DraftArticle) {
       signalId: draft.originalSignalId,
       sourceId: draft.fuente.id,
       titulo: draft.titulo,
-      slug: draft.slug,
+      slug: uniqueSlug,
       subtitulo: draft.subtitulo,
       entradilla: draft.entradilla,
       cuerpo: draft.cuerpo,
@@ -501,7 +539,7 @@ async function upsertDraft(draft: DraftArticle) {
       fechaPublicacionOriginal: new Date(draft.fechaPublicacionOriginal),
       fechaCaptura: new Date(draft.fechaCaptura),
       tiempoLectura: draft.tiempoLectura,
-      seo: draft.seo,
+      seo: nextSeo,
       fuente: draft.fuente,
       riesgoEditorial: draft.riesgoEditorial,
       prioridadPublicacion: draft.prioridadPublicacion,
@@ -512,7 +550,7 @@ async function upsertDraft(draft: DraftArticle) {
       target: draftArticles.id,
       set: {
         titulo: draft.titulo,
-        slug: draft.slug,
+        slug: uniqueSlug,
         subtitulo: draft.subtitulo,
         entradilla: draft.entradilla,
         cuerpo: draft.cuerpo,
@@ -526,7 +564,7 @@ async function upsertDraft(draft: DraftArticle) {
         fechaPublicacionOriginal: new Date(draft.fechaPublicacionOriginal),
         fechaCaptura: new Date(draft.fechaCaptura),
         tiempoLectura: draft.tiempoLectura,
-        seo: draft.seo,
+        seo: nextSeo,
         fuente: draft.fuente,
         riesgoEditorial: draft.riesgoEditorial,
         prioridadPublicacion: draft.prioridadPublicacion,
@@ -1034,12 +1072,17 @@ export async function regenerateDraftArticleFromSignal(draftId: string, reviewer
   const source = mapSourceRow(sourceRow);
   const signal = withDraftMedia(mapSignalRow(signalRow, source), draftRow);
   const regenerated = await generateDraftArticle(signal);
+  const uniqueSlug = await ensureUniqueDraftSlug(regenerated.slug, draftId);
+  const nextSeo = {
+    ...regenerated.seo,
+    canonicalPath: `/articulo/${uniqueSlug}`
+  };
 
   await db
     .update(draftArticles)
     .set({
       titulo: regenerated.titulo,
-      slug: regenerated.slug,
+      slug: uniqueSlug,
       subtitulo: regenerated.subtitulo,
       entradilla: regenerated.entradilla,
       cuerpo: regenerated.cuerpo,
@@ -1053,7 +1096,7 @@ export async function regenerateDraftArticleFromSignal(draftId: string, reviewer
       fechaPublicacionOriginal: new Date(regenerated.fechaPublicacionOriginal),
       fechaCaptura: new Date(regenerated.fechaCaptura),
       tiempoLectura: regenerated.tiempoLectura,
-      seo: regenerated.seo,
+      seo: nextSeo,
       fuente: regenerated.fuente,
       riesgoEditorial: regenerated.riesgoEditorial,
       prioridadPublicacion: regenerated.prioridadPublicacion,
@@ -1067,7 +1110,7 @@ export async function regenerateDraftArticleFromSignal(draftId: string, reviewer
 
   return {
     categoria: regenerated.categoria,
-    slug: regenerated.slug
+    slug: uniqueSlug
   };
 }
 
@@ -1096,7 +1139,8 @@ export async function updateDraftArticleManually(
   }
 
   const wasPublished = draftRow.estado === "published" && Boolean(draftRow.publishedArticleId);
-  const nextSlug = slugifyDraftTitle(input.titulo) || draftRow.slug;
+  const requestedSlug = slugifyDraftTitle(input.titulo) || draftRow.slug;
+  const nextSlug = await ensureUniqueDraftSlug(requestedSlug, draftId);
   const resolvedImageUrl = await resolveImageUrlInput(input.imagenUrl);
   const currentFuente = draftRow.fuente as DraftArticle["fuente"];
   const nextFuente = {
