@@ -25,14 +25,12 @@ export const metadata: Metadata = {
   applicationName: siteConfig.name,
   keywords: ["Synaptik", "IA", "ciencia", "tecnologia", "ciberseguridad", "espacio", "biotech"],
   alternates: {
-    canonical: "/",
     types: {
       "application/rss+xml": `${siteConfig.url}/rss.xml`
     }
   },
   openGraph: {
     type: "website",
-    url: siteConfig.url,
     siteName: siteConfig.name,
     title: `${siteConfig.name} | Ciencia, tecnologia e innovacion`,
     description: siteConfig.description,

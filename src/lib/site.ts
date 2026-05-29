@@ -1,5 +1,8 @@
 function resolveSiteUrl() {
-  const value = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const value =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
+    process.env.VERCEL_URL?.trim();
 
   if (!value) {
     return "https://synaptik.vercel.app";
@@ -18,3 +21,7 @@ export const siteConfig = {
   partnershipsEmail: "alianzas@synaptik.media",
   eventsEmail: "agenda@synaptik.media"
 } as const;
+
+export function buildSiteUrl(path = "/") {
+  return new URL(path, siteConfig.url).toString();
+}

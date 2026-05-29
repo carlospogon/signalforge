@@ -1,8 +1,23 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArticleList } from "@/components/articles/article-list";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getAllArticles, getCategories } from "@/lib/content";
+import { buildSiteUrl } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Archivo",
+  description: "Todas las secciones activas y una selección del archivo editorial de Synaptik.",
+  alternates: {
+    canonical: "/archivo"
+  },
+  openGraph: {
+    url: buildSiteUrl("/archivo"),
+    title: "Archivo",
+    description: "Todas las secciones activas y una selección del archivo editorial de Synaptik."
+  }
+};
 
 export default async function ArchivePage() {
   const categories = getCategories();

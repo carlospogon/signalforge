@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArticleVisual } from "@/components/articles/article-visual";
 import { SignalList } from "@/components/editorial/signal-list";
@@ -6,7 +7,23 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getAllArticles, getCategories } from "@/lib/content";
 import { getEditorialSummary, getRadarSignals } from "@/lib/editorial";
+import { buildSiteUrl, siteConfig } from "@/lib/site";
 import { Article } from "@/types/article";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "/"
+  },
+  openGraph: {
+    url: buildSiteUrl("/"),
+    title: `${siteConfig.name} | Ciencia, tecnologia e innovacion`,
+    description: siteConfig.description
+  },
+  twitter: {
+    title: `${siteConfig.name} | Ciencia, tecnologia e innovacion`,
+    description: siteConfig.description
+  }
+};
 
 const topLinks = [
   { label: "Newsletter", href: "/newsletter" },

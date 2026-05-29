@@ -1,7 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { siteConfig } from "@/lib/site";
+import { buildSiteUrl, siteConfig } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Newsletter",
+  description: "Estado del boletín editorial de Synaptik y acceso temprano a la lista privada.",
+  alternates: {
+    canonical: "/newsletter"
+  },
+  openGraph: {
+    url: buildSiteUrl("/newsletter"),
+    title: "Newsletter",
+    description: "Estado del boletín editorial de Synaptik y acceso temprano a la lista privada."
+  }
+};
 
 export default function NewsletterPage() {
   return (

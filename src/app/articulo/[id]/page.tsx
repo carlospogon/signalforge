@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { OpinionArticleLayout } from "@/components/opinion/opinion-article-layout";
 import { getArticleById, getCategoryBySlug, getRelatedArticles } from "@/lib/content";
+import { buildSiteUrl } from "@/lib/site";
 
 type ArticlePageProps = {
   params: Promise<{ id: string }>;
@@ -25,8 +26,20 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   }
 
   return {
-    title: `${article.title} | Synaptik`,
-    description: article.deck ?? article.excerpt
+    title: article.title,
+    description: article.deck ?? article.excerpt,
+    alternates: {
+      canonical: `/articulo/${id}`
+    },
+    openGraph: {
+      url: buildSiteUrl(`/articulo/${id}`),
+      title: article.title,
+      description: article.deck ?? article.excerpt
+    },
+    twitter: {
+      title: article.title,
+      description: article.deck ?? article.excerpt
+    }
   };
 }
 

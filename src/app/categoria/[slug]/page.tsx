@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { OpinionFeaturedCard } from "@/components/opinion/opinion-featured-card";
 import { getArticlesByCategory, getCategories, getCategoryBySlug } from "@/lib/content";
+import { buildSiteUrl } from "@/lib/site";
 import { CategorySlug } from "@/types/article";
 
 type CategoryPageProps = {
@@ -25,8 +26,20 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   }
 
   return {
-    title: `${category.label} | Synaptik`,
-    description: category.description
+    title: category.label,
+    description: category.description,
+    alternates: {
+      canonical: `/categoria/${slug}`
+    },
+    openGraph: {
+      url: buildSiteUrl(`/categoria/${slug}`),
+      title: category.label,
+      description: category.description
+    },
+    twitter: {
+      title: category.label,
+      description: category.description
+    }
   };
 }
 

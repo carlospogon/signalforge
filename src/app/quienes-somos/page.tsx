@@ -1,6 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { buildSiteUrl } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Quiénes somos",
+  description: "La propuesta editorial y el enfoque de Synaptik sobre ciencia, tecnología e innovación.",
+  alternates: {
+    canonical: "/quienes-somos"
+  },
+  openGraph: {
+    url: buildSiteUrl("/quienes-somos"),
+    title: "Quiénes somos",
+    description: "La propuesta editorial y el enfoque de Synaptik sobre ciencia, tecnología e innovación."
+  }
+};
 
 export default function AboutPage() {
   return (

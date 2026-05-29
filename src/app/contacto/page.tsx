@@ -1,7 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { siteConfig } from "@/lib/site";
+import { buildSiteUrl, siteConfig } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Contacto",
+  description: "Canales editoriales, alianzas y eventos de Synaptik.",
+  alternates: {
+    canonical: "/contacto"
+  },
+  openGraph: {
+    url: buildSiteUrl("/contacto"),
+    title: "Contacto",
+    description: "Canales editoriales, alianzas y eventos de Synaptik."
+  }
+};
 
 export default function ContactPage() {
   return (
